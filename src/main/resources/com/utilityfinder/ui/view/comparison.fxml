@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.utilityfinder.ui.controller.ComparisonController"
+      spacing="0" style="-fx-padding: 0;">
+
+    <!-- ── OVERVIEW MODE ─────────────────────────────────────────────────── -->
+    <VBox fx:id="overviewPane" spacing="12" VBox.vgrow="ALWAYS">
+
+        <HBox alignment="CENTER_LEFT" spacing="12">
+            <Label text="Compare Rate Plans"
+                   style="-fx-font-size: 16; -fx-font-weight: bold;"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="⟳  Refresh" onAction="#handleRefresh" mnemonicParsing="false"/>
+        </HBox>
+
+        <Label fx:id="usageInfoLabel" style="-fx-text-fill: #7f8c8d;"/>
+
+        <Label fx:id="warningBanner" wrapText="true"
+               visible="false" managed="false"
+               style="-fx-background-color: #fef9e7; -fx-text-fill: #d35400;
+                      -fx-padding: 8 12; -fx-background-radius: 4;"/>
+
+        <ScrollPane VBox.vgrow="ALWAYS"
+                    fitToHeight="false" fitToWidth="false"
+                    style="-fx-background-color: transparent; -fx-background: transparent;">
+            <GridPane fx:id="comparisonGrid" hgap="1" vgap="1"
+                      style="-fx-background-color: #d5d8dc;"/>
+        </ScrollPane>
+
+        <Label text="Click 'Detail ▶' in any plan header to see the monthly breakdown  •  Esc: return from detail"
+               style="-fx-text-fill: #95a5a6; -fx-font-size: 11;"/>
+    </VBox>
+
+    <!-- ── DETAIL MODE ───────────────────────────────────────────────────── -->
+    <VBox fx:id="detailPane" spacing="12" VBox.vgrow="ALWAYS"
+          visible="false" managed="false">
+
+        <HBox alignment="CENTER_LEFT" spacing="16">
+            <Button text="← Back" onAction="#handleBack" mnemonicParsing="false"/>
+            <Label fx:id="detailTitle"
+                   style="-fx-font-size: 15; -fx-font-weight: bold;"/>
+        </HBox>
+
+        <Label fx:id="detailPlanInfo" wrapText="true"
+               style="-fx-text-fill: #7f8c8d;"/>
+
+        <TableView fx:id="detailTable" VBox.vgrow="ALWAYS">
+            <columns>
+                <TableColumn fx:id="colDetailMonth"    text="Month"    prefWidth="130" sortable="false"/>
+                <TableColumn fx:id="colDetailKwh"      text="Avg kWh"  prefWidth="100" sortable="false"/>
+                <TableColumn fx:id="colDetailBase"     text="Base"     prefWidth="90"  sortable="false"/>
+                <TableColumn fx:id="colDetailEnergy"   text="Energy"   prefWidth="100" sortable="false"/>
+                <TableColumn fx:id="colDetailDiscount" text="Discount" prefWidth="100" sortable="false"/>
+                <TableColumn fx:id="colDetailTotal"    text="Total"    prefWidth="110" sortable="false"/>
+            </columns>
+        </TableView>
+
+        <Label fx:id="detailFootnote" wrapText="true"
+               visible="false" managed="false"
+               style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;"/>
+
+        <HBox alignment="CENTER_RIGHT">
+            <Label fx:id="detailAnnualTotal"
+                   style="-fx-font-weight: bold; -fx-font-size: 14;"/>
+        </HBox>
+
+        <Button text="← Back to Comparison" onAction="#handleBack" mnemonicParsing="false"/>
+    </VBox>
+
+</VBox>

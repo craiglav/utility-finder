@@ -54,7 +54,7 @@ public class MainController {
     @FXML
     private void handleNavCompare() {
         setActiveNav(btnCompare);
-        // TODO: load comparison view
+        loadView("/com/utilityfinder/ui/view/comparison.fxml");
     }
 
     // ── Workspace management ──────────────────────────────────────────────────
