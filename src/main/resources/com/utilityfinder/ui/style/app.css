@@ -59,3 +59,17 @@
     -fx-text-fill: #95a5a6;
     -fx-font-size: 14px;
 }
+
+/* ── Workspace manager list cell buttons ─────────────────── */
+.cell-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #2980b9;
+    -fx-padding: 2 6 2 6;
+    -fx-cursor: hand;
+    -fx-font-size: 11px;
+}
+
+.cell-button:hover {
+    -fx-background-color: #d6eaf8;
+    -fx-background-radius: 4;
+}

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.utilityfinder.ui.controller.WorkspaceManagerController"
+      prefWidth="420" prefHeight="340" spacing="12"
+      style="-fx-padding: 20; -fx-background-color: white;">
+
+    <Label text="Workspaces" style="-fx-font-size: 15; -fx-font-weight: bold;"/>
+
+    <ListView fx:id="workspaceList" VBox.vgrow="ALWAYS"/>
+
+    <HBox spacing="8" alignment="CENTER_LEFT">
+        <Button text="+ New"  onAction="#handleNew"    mnemonicParsing="false"/>
+        <Button fx:id="btnRename" text="Rename  F2" onAction="#handleRename" mnemonicParsing="false"/>
+        <Button fx:id="btnDelete" text="Delete  Del" onAction="#handleDelete" mnemonicParsing="false"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="Done"   onAction="#handleClose"  defaultButton="true" mnemonicParsing="false"/>
+    </HBox>
+
+    <Label text="F2 rename  •  Del delete  •  arrows navigate"
+           style="-fx-text-fill: #95a5a6; -fx-font-size: 11;"/>
+</VBox>
