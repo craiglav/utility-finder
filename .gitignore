@@ -1,0 +1,32 @@
+# Build output
+target/
+build/
+out/
+
+# Compiled classes
+*.class
+
+# JAR/WAR/EAR (keep release artifacts out of source control)
+*.jar
+*.war
+*.ear
+
+# H2 database files
+*.mv.db
+*.trace.db
+
+# IDE
+.idea/
+*.iml
+.eclipse/
+.settings/
+.project
+.classpath
+*.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Maven wrapper
+!.mvn/wrapper/maven-wrapper.jar
