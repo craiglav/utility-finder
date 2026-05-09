@@ -79,7 +79,8 @@ ratePlan, annualCost, highestMonth{month,cost}, lowestMonth{month,cost}, effecti
 ### Computed (not stored): AveragedUsageProfile
 ```
 For each month 1–12: average of all UsageRecords for that month across all years in the workspace.
-Months with no data are excluded from the average (not zeroed out).
+If a calendar month has no entries at all, substitute the global average
+(mean of all available per-month averages). Flag substituted months for display.
 ```
 
 ---
@@ -87,16 +88,27 @@ Months with no data are excluded from the average (not zeroed out).
 ## Calculation Engine
 
 ```
+globalAvg = mean of all per-month averages that have data
+
 For each month M (1–12):
-  avgKwh      = average kWh for month M across all years
+  if UsageRecords exist for month M:
+    avgKwh   = average kWh for month M across all years
+    estimated = false
+  else:
+    avgKwh   = globalAvg
+    estimated = true   ← flagged for warning banner
+
   energyCost  = avgKwh × rate_per_kwh
   discounts   = sum of discount_amt for all TierDiscounts where avgKwh >= threshold_kwh
   monthCost   = base_charge + energyCost − discounts
 
-annualCost        = sum of monthCost for all 12 months
-highestMonth      = month with max monthCost
-lowestMonth       = month with min monthCost
+annualCost         = sum of monthCost for all 12 months
+highestMonth       = month with max monthCost
+lowestMonth        = month with min monthCost
 effectiveAvgPerKwh = annualCost / sum(avgKwh for all months)
+
+If any month is estimated, show warning banner on comparison screen:
+  "Estimated data used for: [March, November] — no usage records found for those months."
 ```
 
 ---
@@ -287,8 +299,10 @@ Plan Detail — Gexa / Saver 12
 
 ---
 
-## Open Questions Before Development
+## Decisions Log
 
-1. **JavaFX packaging**: Fat JAR via Maven Shade works but requires JavaFX native libs for the target OS. Should we target Mac only for now, or build cross-platform from the start?
-2. **Data directory**: Default to `~/.utility-finder/data.mv.db`? Should the path be configurable via a first-run dialog?
-3. **Months with no usage data**: If a month has no historical entries at all, exclude it from the averaged profile entirely, or show a warning on the comparison?
+| # | Decision |
+|---|----------|
+| 1 | **Packaging**: Mac-only fat JAR (Option A) for v1. Maven build can be extended to multi-platform later via GitHub Actions matrix builds. |
+| 2 | **Data directory**: `~/.utility-finder/data.mv.db` — no configuration UI for v1. |
+| 3 | **Missing months**: Substitute global average kWh for months with no data; show warning banner listing affected months on the comparison screen. |
