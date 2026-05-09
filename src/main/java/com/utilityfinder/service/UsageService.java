@@ -3,7 +3,10 @@ package com.utilityfinder.service;
 import com.utilityfinder.model.UsageRecord;
 import com.utilityfinder.repository.UsageRepository;
 
-import java.util.List;
+import java.time.Month;
+import java.time.format.TextStyle;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class UsageService {
 
@@ -14,28 +17,50 @@ public class UsageService {
     }
 
     public List<UsageRecord> findByWorkspace(long workspaceId) {
-        throw new UnsupportedOperationException("TODO");
+        return repo.findByWorkspace(workspaceId);
     }
 
     public UsageRecord save(UsageRecord record) {
-        throw new UnsupportedOperationException("TODO");
+        if (record.getKwhUsed() <= 0)
+            throw new IllegalArgumentException("kWh must be greater than zero.");
+
+        boolean duplicate = repo.findByWorkspaceYearMonth(
+                record.getWorkspaceId(), record.getYear(), record.getMonth()).isPresent();
+        if (duplicate) {
+            String name = Month.of(record.getMonth())
+                    .getDisplayName(TextStyle.FULL, Locale.getDefault());
+            throw new IllegalArgumentException(
+                    name + " " + record.getYear() + " already has a record for this workspace.");
+        }
+        return repo.save(record);
     }
 
     public void update(UsageRecord record) {
-        throw new UnsupportedOperationException("TODO");
+        if (record.getKwhUsed() <= 0)
+            throw new IllegalArgumentException("kWh must be greater than zero.");
+        repo.update(record);
     }
 
     public void delete(long id) {
-        throw new UnsupportedOperationException("TODO");
+        repo.delete(id);
     }
 
     /**
      * Returns the averaged monthly kWh profile for the workspace.
-     * Index 0 = January, index 11 = December.
-     * Months with no data carry {@code Double.NaN}; ComparisonService
-     * substitutes the global average for those.
+     * Index 0 = January … index 11 = December.
+     * {@code Double.NaN} for any month that has no recorded data.
      */
     public double[] getAveragedProfile(long workspaceId) {
-        throw new UnsupportedOperationException("TODO");
+        double[] profile = new double[12];
+        Arrays.fill(profile, Double.NaN);
+
+        Map<Integer, DoubleSummaryStatistics> byMonth = repo.findByWorkspace(workspaceId)
+                .stream()
+                .collect(Collectors.groupingBy(
+                        UsageRecord::getMonth,
+                        Collectors.summarizingDouble(UsageRecord::getKwhUsed)));
+
+        byMonth.forEach((month, stats) -> profile[month - 1] = stats.getAverage());
+        return profile;
     }
 }

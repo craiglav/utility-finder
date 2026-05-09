@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.utilityfinder.ui.controller.UsageController"
+      spacing="12" style="-fx-padding: 0;">
+
+    <!-- Header -->
+    <HBox alignment="CENTER_LEFT" spacing="12">
+        <Label text="Usage Data"
+               style="-fx-font-size: 16; -fx-font-weight: bold;"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Label text="Year:"/>
+        <ComboBox fx:id="yearFilter" prefWidth="110" onAction="#handleYearFilter"/>
+        <Button text="+ Add Entry" onAction="#handleAddEntry" mnemonicParsing="false"/>
+    </HBox>
+
+    <!-- Record table -->
+    <TableView fx:id="usageTable" VBox.vgrow="ALWAYS">
+        <placeholder>
+            <Label text="No usage data yet — click '+ Add Entry' to get started."/>
+        </placeholder>
+        <columns>
+            <TableColumn fx:id="colYear"    text="Year"  prefWidth="70"  resizable="false"/>
+            <TableColumn fx:id="colMonth"   text="Month" prefWidth="130"/>
+            <TableColumn fx:id="colKwh"     text="kWh"   prefWidth="120"/>
+            <TableColumn fx:id="colActions" text=""      prefWidth="170"
+                         sortable="false" resizable="false"/>
+        </columns>
+    </TableView>
+
+    <!-- Averaged profile -->
+    <VBox spacing="6"
+          style="-fx-background-color: white; -fx-padding: 12; -fx-background-radius: 4;">
+        <Label text="Averaged Profile  (used for rate comparisons)"
+               style="-fx-font-weight: bold; -fx-font-size: 12;"/>
+        <VBox fx:id="profileContainer" spacing="6"/>
+    </VBox>
+
+    <!-- Entry form -->
+    <VBox spacing="8"
+          style="-fx-background-color: white; -fx-padding: 12; -fx-background-radius: 4;">
+        <Label fx:id="formTitle" text="Add Entry"
+               style="-fx-font-weight: bold;"/>
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <Label text="Year"/>
+            <TextField fx:id="fieldYear" prefWidth="72"/>
+            <Label text="Month"/>
+            <ComboBox fx:id="fieldMonth" prefWidth="140"/>
+            <Label text="kWh"/>
+            <TextField fx:id="fieldKwh" prefWidth="90"/>
+            <Button text="Save"   onAction="#handleSave"   defaultButton="true" mnemonicParsing="false"/>
+            <Button text="Cancel" onAction="#handleCancel" mnemonicParsing="false"/>
+        </HBox>
+        <Label text="Tab: next field  •  Enter: save  •  F2: edit selected row  •  Del: delete selected row"
+               style="-fx-text-fill: #95a5a6; -fx-font-size: 11;"/>
+    </VBox>
+
+</VBox>

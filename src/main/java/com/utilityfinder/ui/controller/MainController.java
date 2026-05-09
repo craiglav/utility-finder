@@ -5,6 +5,7 @@ import com.utilityfinder.model.Workspace;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -24,11 +25,12 @@ public class MainController {
     @FXML private Button btnPlans;
     @FXML private Button btnCompare;
 
+    private WorkspaceAware activeViewController;
+
     @FXML
     public void initialize() {
         refreshWorkspaces();
         workspaceSelector.setOnAction(e -> onWorkspaceSelected());
-        // Defer first-run check until after the scene is shown
         Platform.runLater(this::checkFirstRun);
     }
 
@@ -40,19 +42,19 @@ public class MainController {
     @FXML
     private void handleNavUsage() {
         setActiveNav(btnUsage);
-        // TODO: load usage view into contentArea
+        loadView("/com/utilityfinder/ui/view/usage.fxml");
     }
 
     @FXML
     private void handleNavPlans() {
         setActiveNav(btnPlans);
-        // TODO: load plans view into contentArea
+        // TODO: load plans view
     }
 
     @FXML
     private void handleNavCompare() {
         setActiveNav(btnCompare);
-        // TODO: load comparison view into contentArea
+        // TODO: load comparison view
     }
 
     // ── Workspace management ──────────────────────────────────────────────────
@@ -62,6 +64,7 @@ public class MainController {
             openWorkspaceManager();
         } else {
             workspaceSelector.getSelectionModel().selectFirst();
+            handleNavUsage();
         }
     }
 
@@ -84,6 +87,9 @@ public class MainController {
             dialog.showAndWait();
 
             refreshWorkspaces();
+            if (workspaceSelector.getValue() != null && activeViewController == null) {
+                handleNavUsage();
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -107,7 +113,29 @@ public class MainController {
     }
 
     private void onWorkspaceSelected() {
-        // TODO: notify active views to reload for the new workspace
+        Workspace selected = workspaceSelector.getValue();
+        if (activeViewController != null && selected != null) {
+            activeViewController.setWorkspace(selected);
+        }
+    }
+
+    // ── View loading ──────────────────────────────────────────────────────────
+
+    private void loadView(String fxmlPath) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
+            Parent view = loader.load();
+
+            Object ctrl = loader.getController();
+            activeViewController = ctrl instanceof WorkspaceAware wa ? wa : null;
+            if (activeViewController != null && workspaceSelector.getValue() != null) {
+                activeViewController.setWorkspace(workspaceSelector.getValue());
+            }
+
+            contentArea.getChildren().setAll(view);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     // ── Navigation ────────────────────────────────────────────────────────────
