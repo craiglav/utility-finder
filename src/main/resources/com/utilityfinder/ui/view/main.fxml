@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.utilityfinder.ui.controller.MainController"
+            prefHeight="700.0" prefWidth="1100.0">
+
+    <top>
+        <HBox styleClass="header" spacing="12.0">
+            <Label text="Workspace:" styleClass="header-label"/>
+            <ComboBox fx:id="workspaceSelector" prefWidth="220.0"/>
+            <Button text="Manage Workspaces" onAction="#handleManageWorkspaces"
+                    styleClass="header-button"/>
+        </HBox>
+    </top>
+
+    <left>
+        <VBox styleClass="sidebar" prefWidth="160.0">
+            <Button fx:id="btnUsage"   text="Usage Data"  onAction="#handleNavUsage"
+                    maxWidth="Infinity" styleClass="nav-button"/>
+            <Button fx:id="btnPlans"   text="Rate Plans"  onAction="#handleNavPlans"
+                    maxWidth="Infinity" styleClass="nav-button"/>
+            <Button fx:id="btnCompare" text="Compare"     onAction="#handleNavCompare"
+                    maxWidth="Infinity" styleClass="nav-button"/>
+        </VBox>
+    </left>
+
+    <center>
+        <StackPane fx:id="contentArea" styleClass="content-area">
+            <Label text="Select a section from the sidebar to get started."
+                   styleClass="placeholder-label"/>
+        </StackPane>
+    </center>
+
+</BorderPane>
