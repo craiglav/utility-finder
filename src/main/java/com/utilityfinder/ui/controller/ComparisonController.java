@@ -13,6 +13,10 @@ import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.LineChart;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -44,6 +48,7 @@ public class ComparisonController implements WorkspaceAware {
     @FXML private TableColumn<MonthlyEstimate, String> colDetailEnergy;
     @FXML private TableColumn<MonthlyEstimate, String> colDetailDiscount;
     @FXML private TableColumn<MonthlyEstimate, String> colDetailTotal;
+    @FXML private HBox      chartArea;
     @FXML private Label     detailFootnote;
     @FXML private Label     detailAnnualTotal;
 
@@ -266,6 +271,7 @@ public class ComparisonController implements WorkspaceAware {
         detailTable.refresh();
 
         detailAnnualTotal.setText("Annual Total:   " + formatDollars(summary.annualCost()));
+        buildCharts(summary);
 
         boolean hasEstimates = !summary.estimatedMonthNames().isEmpty();
         detailFootnote.setVisible(hasEstimates);
@@ -312,22 +318,70 @@ public class ComparisonController implements WorkspaceAware {
         colDetailTotal.setCellValueFactory(c ->
                 new SimpleStringProperty(String.format("$%.2f", c.getValue().totalCost())));
 
-        // Highlight highest-cost row (light red) and lowest-cost row (light green)
+        // Highlight highest-cost row (red) and lowest-cost row (green);
+        // listen to selectedProperty so style stays correct when row is clicked.
         detailTable.setRowFactory(tv -> new TableRow<>() {
+            {
+                selectedProperty().addListener((obs, old, sel) -> applyStyle());
+            }
+
             @Override
             protected void updateItem(MonthlyEstimate item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null || currentDetail == null) {
+                applyStyle();
+            }
+
+            private void applyStyle() {
+                MonthlyEstimate item = getItem();
+                if (isEmpty() || item == null || currentDetail == null) {
                     setStyle("");
                 } else if (item.month() == currentDetail.highestMonth().month()) {
-                    setStyle("-fx-background-color: #fadbd8; -fx-text-fill: #922b21;");
+                    setStyle(isSelected()
+                            ? "-fx-background-color: #c0392b; -fx-text-fill: white;"
+                            : "-fx-background-color: #fadbd8; -fx-text-fill: #922b21;");
                 } else if (item.month() == currentDetail.lowestMonth().month()) {
-                    setStyle("-fx-background-color: #d5f5e3; -fx-text-fill: #1a5e35;");
+                    setStyle(isSelected()
+                            ? "-fx-background-color: #1e8449; -fx-text-fill: white;"
+                            : "-fx-background-color: #d5f5e3; -fx-text-fill: #1a5e35;");
                 } else {
                     setStyle("");
                 }
             }
         });
+    }
+
+    // ── Charts ────────────────────────────────────────────────────────────────
+
+    private void buildCharts(PlanSummary summary) {
+        LineChart<String, Number> costChart  = makeChart("Monthly Cost",  summary, MonthlyEstimate::totalCost, "Cost ($)");
+        LineChart<String, Number> usageChart = makeChart("Avg Usage",     summary, MonthlyEstimate::avgKwh,    "kWh");
+        HBox.setHgrow(costChart,  Priority.ALWAYS);
+        HBox.setHgrow(usageChart, Priority.ALWAYS);
+        chartArea.getChildren().setAll(costChart, usageChart);
+    }
+
+    private LineChart<String, Number> makeChart(
+            String title, PlanSummary summary,
+            java.util.function.ToDoubleFunction<MonthlyEstimate> valueOf,
+            String yLabel) {
+        CategoryAxis xAxis = new CategoryAxis();
+        NumberAxis   yAxis = new NumberAxis();
+        yAxis.setLabel(yLabel);
+        yAxis.setForceZeroInRange(false);
+
+        LineChart<String, Number> chart = new LineChart<>(xAxis, yAxis);
+        chart.setTitle(title);
+        chart.setLegendVisible(false);
+        chart.setAnimated(false);
+        chart.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        for (MonthlyEstimate e : summary.monthlyEstimates()) {
+            String abbr = Month.of(e.month()).getDisplayName(TextStyle.SHORT, Locale.getDefault());
+            series.getData().add(new XYChart.Data<>(abbr, valueOf.applyAsDouble(e)));
+        }
+        chart.getData().add(series);
+        return chart;
     }
 
     // ── Handlers ─────────────────────────────────────────────────────────────

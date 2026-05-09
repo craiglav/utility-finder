@@ -48,16 +48,19 @@
         <Label fx:id="detailPlanInfo" wrapText="true"
                style="-fx-text-fill: #7f8c8d;"/>
 
-        <TableView fx:id="detailTable" VBox.vgrow="ALWAYS">
-            <columns>
-                <TableColumn fx:id="colDetailMonth"    text="Month"    prefWidth="130" sortable="false"/>
-                <TableColumn fx:id="colDetailKwh"      text="Avg kWh"  prefWidth="100" sortable="false"/>
-                <TableColumn fx:id="colDetailBase"     text="Base"     prefWidth="90"  sortable="false"/>
-                <TableColumn fx:id="colDetailEnergy"   text="Energy"   prefWidth="100" sortable="false"/>
-                <TableColumn fx:id="colDetailDiscount" text="Discount" prefWidth="100" sortable="false"/>
-                <TableColumn fx:id="colDetailTotal"    text="Total"    prefWidth="110" sortable="false"/>
-            </columns>
-        </TableView>
+        <SplitPane orientation="VERTICAL" dividerPositions="0.55" VBox.vgrow="ALWAYS">
+            <TableView fx:id="detailTable">
+                <columns>
+                    <TableColumn fx:id="colDetailMonth"    text="Month"    prefWidth="130" sortable="false"/>
+                    <TableColumn fx:id="colDetailKwh"      text="Avg kWh"  prefWidth="100" sortable="false"/>
+                    <TableColumn fx:id="colDetailBase"     text="Base"     prefWidth="90"  sortable="false"/>
+                    <TableColumn fx:id="colDetailEnergy"   text="Energy"   prefWidth="100" sortable="false"/>
+                    <TableColumn fx:id="colDetailDiscount" text="Discount" prefWidth="100" sortable="false"/>
+                    <TableColumn fx:id="colDetailTotal"    text="Total"    prefWidth="110" sortable="false"/>
+                </columns>
+            </TableView>
+            <HBox fx:id="chartArea" spacing="8" style="-fx-padding: 4 0 0 0;"/>
+        </SplitPane>
 
         <Label fx:id="detailFootnote" wrapText="true"
                visible="false" managed="false"
