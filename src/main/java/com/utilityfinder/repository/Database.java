@@ -50,11 +50,11 @@ public class Database {
         CREATE TABLE IF NOT EXISTS usage_record (
             id           BIGINT AUTO_INCREMENT PRIMARY KEY,
             workspace_id BIGINT NOT NULL,
-            year         INT    NOT NULL,
-            month        INT    NOT NULL CHECK (month BETWEEN 1 AND 12),
+            record_year  INT    NOT NULL,
+            record_month INT    NOT NULL CHECK (record_month BETWEEN 1 AND 12),
             kwh_used     DOUBLE NOT NULL,
             FOREIGN KEY (workspace_id) REFERENCES workspace(id) ON DELETE CASCADE,
-            UNIQUE (workspace_id, year, month)
+            UNIQUE (workspace_id, record_year, record_month)
         )
         """,
         """

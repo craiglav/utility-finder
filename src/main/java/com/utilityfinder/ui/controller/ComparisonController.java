@@ -226,8 +226,8 @@ public class ComparisonController implements WorkspaceAware {
         l.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         l.setPadding(new Insets(10, 14, 10, 14));
         l.setStyle(best
-                ? "-fx-background-color: #d5f5e3; -fx-font-weight: bold;"
-                : "-fx-background-color: white;");
+                ? "-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold;"
+                : "-fx-background-color: white; -fx-text-fill: #2c3e50;");
         return l;
     }
 
@@ -320,9 +320,9 @@ public class ComparisonController implements WorkspaceAware {
                 if (empty || item == null || currentDetail == null) {
                     setStyle("");
                 } else if (item.month() == currentDetail.highestMonth().month()) {
-                    setStyle("-fx-background-color: #fadbd8;");
+                    setStyle("-fx-background-color: #fadbd8; -fx-text-fill: #922b21;");
                 } else if (item.month() == currentDetail.lowestMonth().month()) {
-                    setStyle("-fx-background-color: #d5f5e3;");
+                    setStyle("-fx-background-color: #d5f5e3; -fx-text-fill: #1a5e35;");
                 } else {
                     setStyle("");
                 }

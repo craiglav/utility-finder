@@ -12,24 +12,21 @@
         <Label text="Usage Data"
                style="-fx-font-size: 16; -fx-font-weight: bold;"/>
         <Region HBox.hgrow="ALWAYS"/>
-        <Label text="Year:"/>
-        <ComboBox fx:id="yearFilter" prefWidth="110" onAction="#handleYearFilter"/>
         <Button text="+ Add Entry" onAction="#handleAddEntry" mnemonicParsing="false"/>
     </HBox>
 
-    <!-- Record table -->
-    <TableView fx:id="usageTable" VBox.vgrow="ALWAYS">
+    <!-- Record tree table -->
+    <TreeTableView fx:id="usageTable" VBox.vgrow="ALWAYS" showRoot="false">
         <placeholder>
             <Label text="No usage data yet — click '+ Add Entry' to get started."/>
         </placeholder>
         <columns>
-            <TableColumn fx:id="colYear"    text="Year"  prefWidth="70"  resizable="false"/>
-            <TableColumn fx:id="colMonth"   text="Month" prefWidth="130"/>
-            <TableColumn fx:id="colKwh"     text="kWh"   prefWidth="120"/>
-            <TableColumn fx:id="colActions" text=""      prefWidth="170"
-                         sortable="false" resizable="false"/>
+            <TreeTableColumn fx:id="colGroup"   text="Month"  prefWidth="200" sortable="false"/>
+            <TreeTableColumn fx:id="colKwh"     text="kWh"    prefWidth="120" sortable="false"/>
+            <TreeTableColumn fx:id="colActions" text=""       prefWidth="170"
+                             sortable="false" resizable="false"/>
         </columns>
-    </TableView>
+    </TreeTableView>
 
     <!-- Averaged profile -->
     <VBox spacing="6"
@@ -54,7 +51,7 @@
             <Button text="Save"   onAction="#handleSave"   defaultButton="true" mnemonicParsing="false"/>
             <Button text="Cancel" onAction="#handleCancel" mnemonicParsing="false"/>
         </HBox>
-        <Label text="Tab: next field  •  Enter: save  •  F2: edit selected row  •  Del: delete selected row"
+        <Label text="Tab: next field  •  Enter: save (auto-advances month)  •  F2: edit selected  •  Del: delete selected"
                style="-fx-text-fill: #95a5a6; -fx-font-size: 11;"/>
     </VBox>
 

@@ -10,8 +10,8 @@ import java.util.Optional;
 public class UsageRepository {
 
     public List<UsageRecord> findByWorkspace(long workspaceId) {
-        String sql = "SELECT id, workspace_id, year, month, kwh_used " +
-                     "FROM usage_record WHERE workspace_id = ? ORDER BY year DESC, month ASC";
+        String sql = "SELECT id, workspace_id, record_year, record_month, kwh_used " +
+                     "FROM usage_record WHERE workspace_id = ? ORDER BY record_year DESC, record_month ASC";
         List<UsageRecord> result = new ArrayList<>();
         try (Connection conn = Database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -25,13 +25,13 @@ public class UsageRepository {
         return result;
     }
 
-    public Optional<UsageRecord> findByWorkspaceYearMonth(long workspaceId, int year, int month) {
-        String sql = "SELECT id, workspace_id, year, month, kwh_used " +
-                     "FROM usage_record WHERE workspace_id = ? AND year = ? AND month = ?";
+    public Optional<UsageRecord> findByWorkspaceYearMonth(long workspaceId, int record_year, int month) {
+        String sql = "SELECT id, workspace_id, record_year, record_month, kwh_used " +
+                     "FROM usage_record WHERE workspace_id = ? AND record_year = ? AND record_month = ?";
         try (Connection conn = Database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, workspaceId);
-            ps.setInt(2, year);
+            ps.setInt(2, record_year);
             ps.setInt(3, month);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() ? Optional.of(map(rs)) : Optional.empty();
@@ -42,7 +42,7 @@ public class UsageRepository {
     }
 
     public UsageRecord save(UsageRecord record) {
-        String sql = "INSERT INTO usage_record (workspace_id, year, month, kwh_used) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO usage_record (workspace_id, record_year, record_month, kwh_used) VALUES (?, ?, ?, ?)";
         try (Connection conn = Database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setLong(1, record.getWorkspaceId());
@@ -86,8 +86,8 @@ public class UsageRepository {
         return new UsageRecord(
                 rs.getLong("id"),
                 rs.getLong("workspace_id"),
-                rs.getInt("year"),
-                rs.getInt("month"),
+                rs.getInt("record_year"),
+                rs.getInt("record_month"),
                 rs.getDouble("kwh_used"));
     }
 }

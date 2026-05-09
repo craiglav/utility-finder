@@ -4,13 +4,7 @@ import com.utilityfinder.app.Services;
 import com.utilityfinder.model.UsageRecord;
 import com.utilityfinder.model.Workspace;
 import com.utilityfinder.service.UsageService;
-import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
-import javafx.collections.transformation.FilteredList;
-import javafx.collections.transformation.SortedList;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -35,40 +29,24 @@ public class UsageController implements WorkspaceAware {
             "Jan", "Feb", "Mar", "Apr", "May", "Jun",
             "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-    @FXML private TableView<UsageRecord> usageTable;
-    @FXML private TableColumn<UsageRecord, Integer> colYear;
-    @FXML private TableColumn<UsageRecord, String>  colMonth;
-    @FXML private TableColumn<UsageRecord, Double>  colKwh;
-    @FXML private TableColumn<UsageRecord, Void>    colActions;
-    @FXML private ComboBox<String> yearFilter;
-    @FXML private VBox profileContainer;
-    @FXML private Label formTitle;
-    @FXML private TextField fieldYear;
+    @FXML private TreeTableView<UsageRow>           usageTable;
+    @FXML private TreeTableColumn<UsageRow, String> colGroup;
+    @FXML private TreeTableColumn<UsageRow, String> colKwh;
+    @FXML private TreeTableColumn<UsageRow, Void>   colActions;
+    @FXML private VBox             profileContainer;
+    @FXML private Label            formTitle;
+    @FXML private TextField        fieldYear;
     @FXML private ComboBox<String> fieldMonth;
-    @FXML private TextField fieldKwh;
+    @FXML private TextField        fieldKwh;
 
-    private final ObservableList<UsageRecord> records = FXCollections.observableArrayList();
-    private FilteredList<UsageRecord> filteredRecords;
     private UsageRecord editing = null;
     private Workspace workspace;
     private final UsageService service = Services.get().usage;
 
     @FXML
     public void initialize() {
-        setupTable();
+        setupTreeTable();
         setupForm();
-
-        filteredRecords = new FilteredList<>(records, r -> true);
-        SortedList<UsageRecord> sorted = new SortedList<>(filteredRecords);
-        sorted.comparatorProperty().bind(usageTable.comparatorProperty());
-        usageTable.setItems(sorted);
-
-        colYear.setSortType(TableColumn.SortType.DESCENDING);
-        colMonth.setSortType(TableColumn.SortType.ASCENDING);
-        usageTable.getSortOrder().setAll(colYear, colMonth);
-
-        yearFilter.getItems().add("All Years");
-        yearFilter.getSelectionModel().selectFirst();
     }
 
     @Override
@@ -77,50 +55,76 @@ public class UsageController implements WorkspaceAware {
         loadRecords();
     }
 
-    // ── Table setup ───────────────────────────────────────────────────────────
+    // ── Tree table ────────────────────────────────────────────────────────────
 
-    private void setupTable() {
-        colYear.setCellValueFactory(c ->
-                new SimpleIntegerProperty(c.getValue().getYear()).asObject());
-
-        colMonth.setCellValueFactory(c ->
-                new SimpleStringProperty(MONTH_NAMES.get(c.getValue().getMonth() - 1)));
-
-        colKwh.setCellValueFactory(c ->
-                new SimpleDoubleProperty(c.getValue().getKwhUsed()).asObject());
-        colKwh.setCellFactory(tc -> new TableCell<>() {
-            @Override
-            protected void updateItem(Double v, boolean empty) {
-                super.updateItem(v, empty);
-                setText(empty || v == null ? null : String.format("%,.1f", v));
-            }
+    private void setupTreeTable() {
+        colGroup.setCellValueFactory(c -> {
+            TreeItem<UsageRow> item = c.getValue();
+            if (item == null) return new SimpleStringProperty("");
+            UsageRow row = item.getValue();
+            if (row == null) return new SimpleStringProperty("");
+            return row.isYearGroup()
+                    ? new SimpleStringProperty(String.valueOf(row.year()))
+                    : new SimpleStringProperty(MONTH_NAMES.get(row.record().getMonth() - 1));
         });
 
-        colActions.setCellFactory(tc -> new TableCell<>() {
+        colKwh.setCellValueFactory(c -> {
+            TreeItem<UsageRow> item = c.getValue();
+            if (item == null) return new SimpleStringProperty("");
+            UsageRow row = item.getValue();
+            if (row == null || row.isYearGroup()) return new SimpleStringProperty("");
+            return new SimpleStringProperty(String.format("%,.1f", row.record().getKwhUsed()));
+        });
+
+        colActions.setCellFactory(tc -> new TreeTableCell<>() {
             private final Button editBtn   = new Button("Edit");
             private final Button deleteBtn = new Button("Delete");
-            private final HBox box = new HBox(6, editBtn, deleteBtn);
+            private final HBox   box       = new HBox(6, editBtn, deleteBtn);
 
             {
                 editBtn.getStyleClass().add("cell-button");
                 deleteBtn.getStyleClass().add("cell-button");
                 box.setAlignment(Pos.CENTER_LEFT);
-                editBtn.setOnAction(e   -> handleEditRecord(getTableRow().getItem()));
-                deleteBtn.setOnAction(e -> handleDeleteRecord(getTableRow().getItem()));
+                editBtn.setOnAction(e -> {
+                    UsageRow row = rowItem();
+                    if (row != null && !row.isYearGroup()) handleEditRecord(row.record());
+                });
+                deleteBtn.setOnAction(e -> {
+                    UsageRow row = rowItem();
+                    if (row != null && !row.isYearGroup()) handleDeleteRecord(row.record());
+                });
             }
 
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
-                setGraphic(empty ? null : box);
+                UsageRow row = rowItem();
+                setGraphic(!empty && row != null && !row.isYearGroup() ? box : null);
+            }
+
+            private UsageRow rowItem() {
+                TreeTableRow<UsageRow> r = getTreeTableRow();
+                return r == null ? null : r.getItem();
+            }
+        });
+
+        // Year group rows: bold, tinted background
+        usageTable.setRowFactory(tv -> new TreeTableRow<>() {
+            @Override
+            protected void updateItem(UsageRow item, boolean empty) {
+                super.updateItem(item, empty);
+                setStyle(!empty && item != null && item.isYearGroup()
+                        ? "-fx-font-weight: bold; -fx-background-color: #eaf3fb;"
+                        : "");
             }
         });
 
         usageTable.setOnKeyPressed(e -> {
-            UsageRecord sel = usageTable.getSelectionModel().getSelectedItem();
-            if (sel == null) return;
-            if (e.getCode() == KeyCode.F2)     { handleEditRecord(sel);   e.consume(); }
-            if (e.getCode() == KeyCode.DELETE)  { handleDeleteRecord(sel); e.consume(); }
+            TreeItem<UsageRow> sel = usageTable.getSelectionModel().getSelectedItem();
+            if (sel == null || sel.getValue() == null || sel.getValue().isYearGroup()) return;
+            UsageRecord record = sel.getValue().record();
+            if (e.getCode() == KeyCode.F2)     { handleEditRecord(record);   e.consume(); }
+            if (e.getCode() == KeyCode.DELETE)  { handleDeleteRecord(record); e.consume(); }
         });
     }
 
@@ -129,19 +133,16 @@ public class UsageController implements WorkspaceAware {
     private void setupForm() {
         fieldMonth.getItems().addAll(MONTH_NAMES);
 
-        // Year: digits only, max 4
         fieldYear.textProperty().addListener((obs, old, nv) -> {
             String digits = nv.replaceAll("[^\\d]", "");
             if (digits.length() > 4) digits = digits.substring(0, 4);
             if (!digits.equals(nv)) fieldYear.setText(digits);
         });
 
-        // kWh: digits + at most one decimal point
         fieldKwh.textProperty().addListener((obs, old, nv) -> {
             if (!nv.matches("\\d*\\.?\\d*")) fieldKwh.setText(old);
         });
 
-        // Enter on kWh triggers save
         fieldKwh.setOnAction(e -> handleSave());
 
         fieldYear.setText(String.valueOf(LocalDate.now().getYear()));
@@ -151,27 +152,27 @@ public class UsageController implements WorkspaceAware {
 
     private void loadRecords() {
         if (workspace == null) return;
-        records.setAll(service.findByWorkspace(workspace.getId()));
-        refreshYearFilter();
-        refreshProfile();
-    }
+        List<UsageRecord> all = service.findByWorkspace(workspace.getId());
 
-    private void refreshYearFilter() {
-        String selected = yearFilter.getValue();
-        yearFilter.getItems().setAll("All Years");
-        records.stream()
+        TreeItem<UsageRow> root = new TreeItem<>();
+        all.stream()
                 .mapToInt(UsageRecord::getYear)
                 .distinct()
                 .boxed()
                 .sorted(Comparator.reverseOrder())
-                .map(String::valueOf)
-                .forEach(yearFilter.getItems()::add);
+                .forEach(year -> {
+                    TreeItem<UsageRow> yearItem = new TreeItem<>(new UsageRow(year, null));
+                    yearItem.setExpanded(true);
+                    all.stream()
+                            .filter(r -> r.getYear() == year)
+                            .sorted(Comparator.comparingInt(UsageRecord::getMonth))
+                            .map(r -> new TreeItem<>(new UsageRow(null, r)))
+                            .forEach(yearItem.getChildren()::add);
+                    root.getChildren().add(yearItem);
+                });
 
-        if (selected != null && yearFilter.getItems().contains(selected)) {
-            yearFilter.setValue(selected);
-        } else {
-            yearFilter.getSelectionModel().selectFirst();
-        }
+        usageTable.setRoot(root);
+        refreshProfile();
     }
 
     private void refreshProfile() {
@@ -201,18 +202,7 @@ public class UsageController implements WorkspaceAware {
         return row;
     }
 
-    // ── Event handlers ────────────────────────────────────────────────────────
-
-    @FXML
-    private void handleYearFilter() {
-        String selected = yearFilter.getValue();
-        if (selected == null || "All Years".equals(selected)) {
-            filteredRecords.setPredicate(r -> true);
-        } else {
-            int year = Integer.parseInt(selected);
-            filteredRecords.setPredicate(r -> r.getYear() == year);
-        }
-    }
+    // ── Handlers ─────────────────────────────────────────────────────────────
 
     @FXML
     private void handleAddEntry() {
@@ -223,7 +213,6 @@ public class UsageController implements WorkspaceAware {
 
     @FXML
     private void handleSave() {
-        // Validate year
         String yearText = fieldYear.getText().strip();
         if (yearText.length() != 4) {
             showError("Please enter a 4-digit year.");
@@ -232,7 +221,6 @@ public class UsageController implements WorkspaceAware {
         }
         int year = Integer.parseInt(yearText);
 
-        // Validate month
         int monthIndex = fieldMonth.getSelectionModel().getSelectedIndex();
         if (monthIndex < 0) {
             showError("Please select a month.");
@@ -241,7 +229,6 @@ public class UsageController implements WorkspaceAware {
         }
         int month = monthIndex + 1;
 
-        // Validate kWh
         String kwhText = fieldKwh.getText().strip();
         if (kwhText.isEmpty()) {
             showError("Please enter the kWh value.");
@@ -261,10 +248,15 @@ public class UsageController implements WorkspaceAware {
             if (editing == null) {
                 service.save(new UsageRecord(workspace.getId(), year, month, kwh));
                 loadRecords();
-                // Keep year — user likely entering multiple months for the same year
-                fieldMonth.getSelectionModel().clearSelection();
+                // Auto-advance: move to next month (wrapping Dec → Jan of next year)
+                int nextIndex = monthIndex + 1;
+                if (nextIndex >= 12) {
+                    nextIndex = 0;
+                    fieldYear.setText(String.valueOf(year + 1));
+                }
+                fieldMonth.getSelectionModel().select(nextIndex);
                 fieldKwh.clear();
-                fieldMonth.requestFocus();
+                fieldKwh.requestFocus();
             } else {
                 editing.setKwhUsed(kwh);
                 service.update(editing);
@@ -324,5 +316,11 @@ public class UsageController implements WorkspaceAware {
         alert.setHeaderText(null);
         alert.initOwner(usageTable.getScene().getWindow());
         alert.showAndWait();
+    }
+
+    // ── Inner type ────────────────────────────────────────────────────────────
+
+    private record UsageRow(Integer year, UsageRecord record) {
+        boolean isYearGroup() { return record == null; }
     }
 }
