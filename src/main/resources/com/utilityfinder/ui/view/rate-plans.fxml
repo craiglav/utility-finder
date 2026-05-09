@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.utilityfinder.ui.controller.RatePlanController"
+      spacing="12" style="-fx-padding: 0;">
+
+    <!-- Header -->
+    <HBox alignment="CENTER_LEFT" spacing="12">
+        <Label text="Rate Plans"
+               style="-fx-font-size: 16; -fx-font-weight: bold;"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="+ Add Plan" onAction="#handleAddPlan" mnemonicParsing="false"/>
+    </HBox>
+
+    <!-- Table / Form split -->
+    <SplitPane orientation="VERTICAL" dividerPositions="0.45" VBox.vgrow="ALWAYS">
+
+        <!-- Top: plans table -->
+        <TableView fx:id="plansTable">
+            <placeholder>
+                <Label text="No rate plans yet — click '+ Add Plan' to get started."/>
+            </placeholder>
+            <columns>
+                <TableColumn fx:id="colProvider" text="Provider"  prefWidth="160"/>
+                <TableColumn fx:id="colPlanName" text="Plan"      prefWidth="160"/>
+                <TableColumn fx:id="colTerm"     text="Term"      prefWidth="80"  sortable="false"/>
+                <TableColumn fx:id="colBase"     text="Base"      prefWidth="90"  sortable="false"/>
+                <TableColumn fx:id="colRate"     text="Rate"      prefWidth="110" sortable="false"/>
+                <TableColumn fx:id="colActions"  text=""          prefWidth="220"
+                             sortable="false" resizable="false"/>
+            </columns>
+        </TableView>
+
+        <!-- Bottom: entry / edit form -->
+        <ScrollPane fitToWidth="true" style="-fx-background-color: white;">
+            <content>
+                <VBox spacing="10"
+                      style="-fx-padding: 14; -fx-background-color: white;">
+
+                    <Label fx:id="formTitle" text="Add Plan"
+                           style="-fx-font-weight: bold; -fx-font-size: 13;"/>
+
+                    <!-- Main fields grid -->
+                    <GridPane hgap="12" vgap="8">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="110" prefWidth="110"/>
+                            <ColumnConstraints minWidth="160" prefWidth="180" hgrow="SOMETIMES"/>
+                            <ColumnConstraints minWidth="110" prefWidth="110"/>
+                            <ColumnConstraints minWidth="160" prefWidth="180" hgrow="SOMETIMES"/>
+                        </columnConstraints>
+
+                        <Label text="Provider"        GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                        <TextField fx:id="fieldProvider" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                        <Label text="Plan Name"       GridPane.rowIndex="0" GridPane.columnIndex="2"/>
+                        <TextField fx:id="fieldPlanName" GridPane.rowIndex="0" GridPane.columnIndex="3"/>
+
+                        <Label text="Term (months)"   GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                        <TextField fx:id="fieldTerm" prefWidth="80"
+                                   GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                        <Label text="Base Charge ($)" GridPane.rowIndex="1" GridPane.columnIndex="2"/>
+                        <TextField fx:id="fieldBase" prefWidth="100"
+                                   GridPane.rowIndex="1" GridPane.columnIndex="3"/>
+
+                        <Label text="Rate (¢/kWh)"    GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                        <TextField fx:id="fieldRate" prefWidth="100"
+                                   GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                        <CheckBox fx:id="checkCurrent" text="Current plan"
+                                  GridPane.rowIndex="2" GridPane.columnIndex="2"
+                                  GridPane.columnSpan="2"/>
+                    </GridPane>
+
+                    <!-- Discounts -->
+                    <VBox spacing="6">
+                        <HBox spacing="8" alignment="CENTER_LEFT">
+                            <Label text="Usage Discounts"
+                                   style="-fx-font-weight: bold; -fx-font-size: 12;"/>
+                            <Label text="applied when monthly kWh meets threshold"
+                                   style="-fx-text-fill: #95a5a6; -fx-font-size: 11;"/>
+                        </HBox>
+                        <VBox fx:id="discountRows" spacing="6"/>
+                        <Button text="+ Add Discount" onAction="#handleAddDiscount"
+                                mnemonicParsing="false"/>
+                    </VBox>
+
+                    <!-- Notes -->
+                    <Label text="Notes"/>
+                    <TextArea fx:id="fieldNotes" prefHeight="54" wrapText="true"/>
+
+                    <!-- Save / Cancel -->
+                    <HBox spacing="8">
+                        <Button text="Save Plan" onAction="#handleSave"
+                                defaultButton="true" mnemonicParsing="false"/>
+                        <Button text="Cancel"    onAction="#handleCancel"
+                                mnemonicParsing="false"/>
+                    </HBox>
+
+                    <Label text="Tab: next field  •  F2: edit selected plan  •  Del: delete selected plan"
+                           style="-fx-text-fill: #95a5a6; -fx-font-size: 11;"/>
+                </VBox>
+            </content>
+        </ScrollPane>
+
+    </SplitPane>
+
+</VBox>

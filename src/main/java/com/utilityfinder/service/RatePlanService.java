@@ -1,6 +1,7 @@
 package com.utilityfinder.service;
 
 import com.utilityfinder.model.RatePlan;
+import com.utilityfinder.model.TierDiscount;
 import com.utilityfinder.repository.RatePlanRepository;
 
 import java.util.List;
@@ -14,24 +15,48 @@ public class RatePlanService {
     }
 
     public List<RatePlan> findByWorkspace(long workspaceId) {
-        throw new UnsupportedOperationException("TODO");
+        return repo.findByWorkspace(workspaceId);
     }
 
-    /** Saves the plan and its tier discounts in one operation. */
     public RatePlan save(RatePlan plan) {
-        throw new UnsupportedOperationException("TODO");
+        validate(plan);
+        if (plan.isCurrent()) repo.clearCurrentFlags(plan.getWorkspaceId());
+        return repo.save(plan);
     }
 
-    /** Updates the plan and replaces its tier discounts. */
     public void update(RatePlan plan) {
-        throw new UnsupportedOperationException("TODO");
+        validate(plan);
+        if (plan.isCurrent()) repo.clearCurrentFlags(plan.getWorkspaceId());
+        repo.update(plan);
     }
 
     public void delete(long id) {
-        throw new UnsupportedOperationException("TODO");
+        repo.delete(id);
     }
 
     public void markAsCurrent(long planId, long workspaceId) {
-        throw new UnsupportedOperationException("TODO");
+        repo.markAsCurrent(planId, workspaceId);
+    }
+
+    // ── Validation ────────────────────────────────────────────────────────────
+
+    private void validate(RatePlan plan) {
+        if (plan.getProviderName() == null || plan.getProviderName().isBlank())
+            throw new IllegalArgumentException("Provider name is required.");
+        if (plan.getPlanName() == null || plan.getPlanName().isBlank())
+            throw new IllegalArgumentException("Plan name is required.");
+        if (plan.getRatePerKwh() <= 0)
+            throw new IllegalArgumentException("Rate must be greater than zero.");
+        if (plan.getBaseCharge() < 0)
+            throw new IllegalArgumentException("Base charge cannot be negative.");
+        if (plan.getContractTermMonths() != null && plan.getContractTermMonths() < 1)
+            throw new IllegalArgumentException("Contract term must be at least 1 month.");
+
+        for (TierDiscount d : plan.getDiscounts()) {
+            if (d.getThresholdKwh() <= 0)
+                throw new IllegalArgumentException("Discount threshold must be greater than zero.");
+            if (d.getDiscountAmt() <= 0)
+                throw new IllegalArgumentException("Discount amount must be greater than zero.");
+        }
     }
 }

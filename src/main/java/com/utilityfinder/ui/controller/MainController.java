@@ -48,7 +48,7 @@ public class MainController {
     @FXML
     private void handleNavPlans() {
         setActiveNav(btnPlans);
-        // TODO: load plans view
+        loadView("/com/utilityfinder/ui/view/rate-plans.fxml");
     }
 
     @FXML
