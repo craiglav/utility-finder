@@ -60,11 +60,13 @@ public class UsageRepository {
     }
 
     public void update(UsageRecord record) {
-        String sql = "UPDATE usage_record SET kwh_used = ? WHERE id = ?";
+        String sql = "UPDATE usage_record SET record_year = ?, record_month = ?, kwh_used = ? WHERE id = ?";
         try (Connection conn = Database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setDouble(1, record.getKwhUsed());
-            ps.setLong(2, record.getId());
+            ps.setInt(1, record.getYear());
+            ps.setInt(2, record.getMonth());
+            ps.setDouble(3, record.getKwhUsed());
+            ps.setLong(4, record.getId());
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException(e);

@@ -15,6 +15,7 @@ import javafx.scene.layout.VBox;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.format.TextStyle;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -179,12 +180,16 @@ public class UsageController implements WorkspaceAware {
         profileContainer.getChildren().clear();
         if (workspace == null) return;
         double[] profile = service.getAveragedProfile(workspace.getId());
+        double mean = Arrays.stream(profile)
+                .filter(v -> !Double.isNaN(v))
+                .average()
+                .orElse(Double.NaN);
         profileContainer.getChildren().addAll(
-                buildProfileRow(profile, 0, 6),
-                buildProfileRow(profile, 6, 12));
+                buildProfileRow(profile, mean, 0, 6),
+                buildProfileRow(profile, mean, 6, 12));
     }
 
-    private HBox buildProfileRow(double[] profile, int start, int end) {
+    private HBox buildProfileRow(double[] profile, double mean, int start, int end) {
         HBox row = new HBox(6);
         for (int i = start; i < end; i++) {
             VBox cell = new VBox(2);
@@ -193,10 +198,19 @@ public class UsageController implements WorkspaceAware {
                           "-fx-padding: 4 8; -fx-background-radius: 4;");
             Label monthLbl = new Label(MONTH_ABBR[i]);
             monthLbl.setStyle("-fx-font-weight: bold; -fx-font-size: 11;");
-            String kwhText = Double.isNaN(profile[i]) ? "—"
-                    : String.format("%,.1f", profile[i]);
-            Label kwhLbl = new Label(kwhText);
-            cell.getChildren().addAll(monthLbl, kwhLbl);
+            if (Double.isNaN(profile[i])) {
+                cell.getChildren().addAll(monthLbl, new Label("—"));
+            } else {
+                Label kwhLbl = new Label(String.format("%,.1f", profile[i]));
+                cell.getChildren().addAll(monthLbl, kwhLbl);
+                if (!Double.isNaN(mean)) {
+                    double delta = profile[i] - mean;
+                    Label deltaLbl = new Label(String.format("%+,.0f", delta));
+                    deltaLbl.setStyle("-fx-font-size: 10; -fx-text-fill: "
+                            + (delta < 0 ? "#27ae60" : delta > 0 ? "#e74c3c" : "#7f8c8d") + ";");
+                    cell.getChildren().add(deltaLbl);
+                }
+            }
             row.getChildren().add(cell);
         }
         return row;
@@ -258,6 +272,8 @@ public class UsageController implements WorkspaceAware {
                 fieldKwh.clear();
                 fieldKwh.requestFocus();
             } else {
+                editing.setYear(year);
+                editing.setMonth(month);
                 editing.setKwhUsed(kwh);
                 service.update(editing);
                 loadRecords();

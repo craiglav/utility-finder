@@ -12,6 +12,7 @@ import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.geometry.Side;
 import javafx.scene.Node;
 import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.LineChart;
@@ -27,6 +28,7 @@ import java.time.format.TextStyle;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class ComparisonController implements WorkspaceAware {
@@ -353,35 +355,48 @@ public class ComparisonController implements WorkspaceAware {
     // ── Charts ────────────────────────────────────────────────────────────────
 
     private void buildCharts(PlanSummary summary) {
-        LineChart<String, Number> costChart  = makeChart("Monthly Cost",  summary, MonthlyEstimate::totalCost, "Cost ($)");
-        LineChart<String, Number> usageChart = makeChart("Avg Usage",     summary, MonthlyEstimate::avgKwh,    "kWh");
-        HBox.setHgrow(costChart,  Priority.ALWAYS);
-        HBox.setHgrow(usageChart, Priority.ALWAYS);
-        chartArea.getChildren().setAll(costChart, usageChart);
-    }
+        List<MonthlyEstimate> estimates = summary.monthlyEstimates();
+        List<String> monthAbbrs = estimates.stream()
+                .map(e -> Month.of(e.month()).getDisplayName(TextStyle.SHORT, Locale.getDefault()))
+                .collect(Collectors.toList());
 
-    private LineChart<String, Number> makeChart(
-            String title, PlanSummary summary,
-            java.util.function.ToDoubleFunction<MonthlyEstimate> valueOf,
-            String yLabel) {
-        CategoryAxis xAxis = new CategoryAxis();
-        NumberAxis   yAxis = new NumberAxis();
-        yAxis.setLabel(yLabel);
-        yAxis.setForceZeroInRange(false);
+        // Primary chart: cost on left y-axis
+        CategoryAxis xAxis1 = new CategoryAxis();
+        xAxis1.setCategories(FXCollections.observableArrayList(monthAbbrs));
+        NumberAxis yAxis1 = new NumberAxis();
+        yAxis1.setLabel("Cost ($)");
+        yAxis1.setForceZeroInRange(true);
+        LineChart<String, Number> costChart = new LineChart<>(xAxis1, yAxis1);
+        costChart.setAnimated(false);
+        costChart.setLegendVisible(false);
+        costChart.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        XYChart.Series<String, Number> costSeries = new XYChart.Series<>();
+        estimates.forEach(e -> costSeries.getData().add(new XYChart.Data<>(
+                Month.of(e.month()).getDisplayName(TextStyle.SHORT, Locale.getDefault()), e.totalCost())));
+        costChart.getData().add(costSeries);
 
-        LineChart<String, Number> chart = new LineChart<>(xAxis, yAxis);
-        chart.setTitle(title);
-        chart.setLegendVisible(false);
-        chart.setAnimated(false);
-        chart.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        // Overlay chart: kWh on right y-axis, transparent background
+        CategoryAxis xAxis2 = new CategoryAxis();
+        xAxis2.setCategories(FXCollections.observableArrayList(monthAbbrs));
+        xAxis2.setStyle("-fx-opacity: 0;");  // invisible but preserves layout space for alignment
+        NumberAxis yAxis2 = new NumberAxis();
+        yAxis2.setLabel("kWh");
+        yAxis2.setSide(Side.RIGHT);
+        yAxis2.setForceZeroInRange(true);
+        LineChart<String, Number> usageChart = new LineChart<>(xAxis2, yAxis2);
+        usageChart.setAnimated(false);
+        usageChart.setLegendVisible(false);
+        usageChart.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        usageChart.getStyleClass().add("chart-overlay");
+        XYChart.Series<String, Number> usageSeries = new XYChart.Series<>();
+        estimates.forEach(e -> usageSeries.getData().add(new XYChart.Data<>(
+                Month.of(e.month()).getDisplayName(TextStyle.SHORT, Locale.getDefault()), e.avgKwh())));
+        usageChart.getData().add(usageSeries);
 
-        XYChart.Series<String, Number> series = new XYChart.Series<>();
-        for (MonthlyEstimate e : summary.monthlyEstimates()) {
-            String abbr = Month.of(e.month()).getDisplayName(TextStyle.SHORT, Locale.getDefault());
-            series.getData().add(new XYChart.Data<>(abbr, valueOf.applyAsDouble(e)));
-        }
-        chart.getData().add(series);
-        return chart;
+        StackPane combined = new StackPane(costChart, usageChart);
+        combined.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        HBox.setHgrow(combined, Priority.ALWAYS);
+        chartArea.getChildren().setAll(combined);
     }
 
     // ── Handlers ─────────────────────────────────────────────────────────────

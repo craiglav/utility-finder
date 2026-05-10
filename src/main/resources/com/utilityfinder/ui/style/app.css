@@ -60,6 +60,28 @@
     -fx-font-size: 14px;
 }
 
+/* ── Dual-axis chart overlay ─────────────────────────────── */
+.chart-overlay {
+    -fx-background-color: transparent;
+}
+.chart-overlay .chart-plot-background {
+    -fx-background-color: transparent;
+}
+.chart-overlay .chart-horizontal-grid-lines {
+    -fx-stroke: transparent;
+}
+.chart-overlay .chart-vertical-grid-lines {
+    -fx-stroke: transparent;
+}
+.chart-overlay .chart-alternative-row-fill {
+    -fx-fill: transparent;
+    -fx-stroke: transparent;
+}
+.chart-overlay .chart-alternative-column-fill {
+    -fx-fill: transparent;
+    -fx-stroke: transparent;
+}
+
 /* ── Workspace manager list cell buttons ─────────────────── */
 .cell-button {
     -fx-background-color: transparent;

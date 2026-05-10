@@ -38,6 +38,15 @@ public class UsageService {
     public void update(UsageRecord record) {
         if (record.getKwhUsed() <= 0)
             throw new IllegalArgumentException("kWh must be greater than zero.");
+        repo.findByWorkspaceYearMonth(record.getWorkspaceId(), record.getYear(), record.getMonth())
+                .ifPresent(existing -> {
+                    if (!existing.getId().equals(record.getId())) {
+                        String name = Month.of(record.getMonth())
+                                .getDisplayName(TextStyle.FULL, Locale.getDefault());
+                        throw new IllegalArgumentException(
+                                name + " " + record.getYear() + " already has a record for this workspace.");
+                    }
+                });
         repo.update(record);
     }
 
