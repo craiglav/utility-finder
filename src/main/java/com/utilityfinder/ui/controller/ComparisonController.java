@@ -363,9 +363,8 @@ public class ComparisonController implements WorkspaceAware {
         // Primary chart: cost on left y-axis
         CategoryAxis xAxis1 = new CategoryAxis();
         xAxis1.setCategories(FXCollections.observableArrayList(monthAbbrs));
-        NumberAxis yAxis1 = new NumberAxis();
+        NumberAxis yAxis1 = new NumberAxis(0, 300, 50);
         yAxis1.setLabel("Cost ($)");
-        yAxis1.setForceZeroInRange(true);
         LineChart<String, Number> costChart = new LineChart<>(xAxis1, yAxis1);
         costChart.setAnimated(false);
         costChart.setLegendVisible(false);
