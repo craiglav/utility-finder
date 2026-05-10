@@ -82,6 +82,12 @@
     -fx-stroke: transparent;
 }
 
+/* Explicit series colors so the two overlaid charts are distinct */
+.chart-cost .default-color0.chart-series-line   { -fx-stroke: #2980b9; }
+.chart-cost .default-color0.chart-line-symbol   { -fx-background-color: #2980b9, white; }
+.chart-overlay .default-color0.chart-series-line { -fx-stroke: #e67e22; }
+.chart-overlay .default-color0.chart-line-symbol { -fx-background-color: #e67e22, white; }
+
 /* ── Workspace manager list cell buttons ─────────────────── */
 .cell-button {
     -fx-background-color: transparent;

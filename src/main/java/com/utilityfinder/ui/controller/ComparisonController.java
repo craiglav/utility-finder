@@ -370,6 +370,7 @@ public class ComparisonController implements WorkspaceAware {
         costChart.setAnimated(false);
         costChart.setLegendVisible(false);
         costChart.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        costChart.getStyleClass().add("chart-cost");
         XYChart.Series<String, Number> costSeries = new XYChart.Series<>();
         estimates.forEach(e -> costSeries.getData().add(new XYChart.Data<>(
                 Month.of(e.month()).getDisplayName(TextStyle.SHORT, Locale.getDefault()), e.totalCost())));
@@ -393,10 +394,36 @@ public class ComparisonController implements WorkspaceAware {
                 Month.of(e.month()).getDisplayName(TextStyle.SHORT, Locale.getDefault()), e.avgKwh())));
         usageChart.getData().add(usageSeries);
 
+        // Cross-pad to align plot areas: primary's left y-axis pushes the plot right;
+        // overlay's right y-axis pushes the plot left. Balance them with matching padding.
+        yAxis1.widthProperty().addListener((obs, old, w) ->
+                usageChart.setPadding(new Insets(0, 0, 0, w.doubleValue())));
+        yAxis2.widthProperty().addListener((obs, old, w) ->
+                costChart.setPadding(new Insets(0, w.doubleValue(), 0, 0)));
+
         StackPane combined = new StackPane(costChart, usageChart);
         combined.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
-        HBox.setHgrow(combined, Priority.ALWAYS);
-        chartArea.getChildren().setAll(combined);
+
+        HBox legend = new HBox(20, legendItem("#2980b9", "Cost ($)"), legendItem("#e67e22", "Avg kWh"));
+        legend.setAlignment(Pos.CENTER);
+        legend.setPadding(new Insets(4, 0, 0, 0));
+
+        VBox wrapper = new VBox(legend, combined);
+        VBox.setVgrow(combined, Priority.ALWAYS);
+        wrapper.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        HBox.setHgrow(wrapper, Priority.ALWAYS);
+        chartArea.getChildren().setAll(wrapper);
+    }
+
+    private static HBox legendItem(String color, String name) {
+        Region swatch = new Region();
+        swatch.setStyle(String.format(
+                "-fx-background-color: %s; -fx-min-width: 16; -fx-max-width: 16; -fx-min-height: 3; -fx-max-height: 3;", color));
+        Label lbl = new Label(name);
+        lbl.setStyle("-fx-font-size: 11;");
+        HBox item = new HBox(6, swatch, lbl);
+        item.setAlignment(Pos.CENTER_LEFT);
+        return item;
     }
 
     // ── Handlers ─────────────────────────────────────────────────────────────
