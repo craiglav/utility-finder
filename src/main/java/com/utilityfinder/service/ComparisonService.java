@@ -28,12 +28,22 @@ public class ComparisonService {
         double[] rawProfile = usageService.getAveragedProfile(workspaceId);
         double[] profile = substituteGlobalAverage(rawProfile);
         List<RatePlan> plans = ratePlanService.findByWorkspace(workspaceId);
+
+        long remainingMonths = plans.stream()
+                .filter(RatePlan::isCurrent)
+                .findFirst()
+                .map(p -> p.getContractEndDate() != null
+                        ? Math.max(0, ChronoUnit.MONTHS.between(
+                                YearMonth.now(), YearMonth.from(p.getContractEndDate())))
+                        : 0L)
+                .orElse(0L);
+
         return plans.stream()
-                .map(plan -> calculate(plan, rawProfile, profile))
+                .map(plan -> calculate(plan, rawProfile, profile, remainingMonths))
                 .toList();
     }
 
-    private PlanSummary calculate(RatePlan plan, double[] rawProfile, double[] profile) {
+    private PlanSummary calculate(RatePlan plan, double[] rawProfile, double[] profile, long remainingMonths) {
         List<MonthlyEstimate> estimates = new ArrayList<>();
         List<String> estimatedNames = new ArrayList<>();
 
@@ -74,8 +84,17 @@ public class ComparisonService {
             if (plan.getTerminationFeePerMonth() != null) terminationFee += plan.getTerminationFeePerMonth() * remaining;
         }
 
-        return new PlanSummary(plan, annual, terminationFee, highest, lowest, effectiveRate,
-                estimates, estimatedNames);
+        double remainingMonthsCost = 0;
+        if (remainingMonths > 0) {
+            YearMonth start = YearMonth.now().plusMonths(1);
+            for (long m = 0; m < remainingMonths; m++) {
+                int monthIdx = start.plusMonths(m).getMonthValue() - 1;
+                remainingMonthsCost += estimates.get(monthIdx).totalCost();
+            }
+        }
+
+        return new PlanSummary(plan, annual, terminationFee, remainingMonthsCost, highest, lowest,
+                effectiveRate, estimates, estimatedNames);
     }
 
     /** Replaces NaN entries (months with no data) with the mean of all valid months. */

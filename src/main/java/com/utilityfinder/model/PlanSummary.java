@@ -11,6 +11,7 @@ public record PlanSummary(
         RatePlan plan,
         double annualCost,
         double terminationFee,
+        double remainingMonthsCost,
         MonthlyEstimate highestMonth,
         MonthlyEstimate lowestMonth,
         double effectiveAvgPerKwh,
