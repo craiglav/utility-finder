@@ -68,24 +68,10 @@
                         <Label text="Rate (¢/kWh)"    GridPane.rowIndex="2" GridPane.columnIndex="0"/>
                         <TextField fx:id="fieldRate" prefWidth="100"
                                    GridPane.rowIndex="2" GridPane.columnIndex="1"/>
-                        <CheckBox fx:id="checkCurrent" text="Current plan"
-                                  GridPane.rowIndex="2" GridPane.columnIndex="2"
-                                  GridPane.columnSpan="2"/>
 
                         <Label text="Renewable (%)"   GridPane.rowIndex="3" GridPane.columnIndex="0"/>
                         <TextField fx:id="fieldRenewable" prefWidth="80" promptText="optional"
                                    GridPane.rowIndex="3" GridPane.columnIndex="1"/>
-
-                        <Label text="Contract End"   GridPane.rowIndex="4" GridPane.columnIndex="0"/>
-                        <DatePicker fx:id="fieldContractEnd" promptText="optional"
-                                    GridPane.rowIndex="4" GridPane.columnIndex="1"/>
-                        <Label text="Flat Exit Fee ($)" GridPane.rowIndex="4" GridPane.columnIndex="2"/>
-                        <TextField fx:id="fieldTermFeeFlat" prefWidth="100" promptText="optional"
-                                   GridPane.rowIndex="4" GridPane.columnIndex="3"/>
-
-                        <Label text="Exit Fee/Month ($)" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
-                        <TextField fx:id="fieldTermFeePerMonth" prefWidth="100" promptText="optional"
-                                   GridPane.rowIndex="5" GridPane.columnIndex="1"/>
                     </GridPane>
 
                     <!-- Discounts -->
@@ -99,6 +85,37 @@
                         <VBox fx:id="discountRows" spacing="6"/>
                         <Button text="+ Add Discount" onAction="#handleAddDiscount"
                                 mnemonicParsing="false"/>
+                    </VBox>
+
+                    <!-- Early Termination Fees -->
+                    <VBox spacing="6">
+                        <HBox spacing="8" alignment="CENTER_LEFT">
+                            <Label text="Early Termination Fees"
+                                   style="-fx-font-weight: bold; -fx-font-size: 12;"/>
+                            <Label text="used in switch savings calculation on the Comparison tab"
+                                   style="-fx-text-fill: #95a5a6; -fx-font-size: 11;"/>
+                        </HBox>
+                        <HBox spacing="12" alignment="CENTER_LEFT">
+                            <Label text="Flat Fee ($)" minWidth="90"/>
+                            <TextField fx:id="fieldTermFeeFlat" prefWidth="100" promptText="optional"/>
+                            <Label text="Per Month ($)" minWidth="100"/>
+                            <TextField fx:id="fieldTermFeePerMonth" prefWidth="100" promptText="optional"/>
+                        </HBox>
+                    </VBox>
+
+                    <!-- Current Plan -->
+                    <VBox spacing="6">
+                        <HBox spacing="8" alignment="CENTER_LEFT">
+                            <Label text="Current Plan"
+                                   style="-fx-font-weight: bold; -fx-font-size: 12;"/>
+                            <Label text="unlocks contract-period cost and switch savings on the Comparison tab"
+                                   style="-fx-text-fill: #95a5a6; -fx-font-size: 11;"/>
+                        </HBox>
+                        <HBox spacing="20" alignment="CENTER_LEFT">
+                            <CheckBox fx:id="checkCurrent" text="Current plan"/>
+                            <Label text="Contract End"/>
+                            <DatePicker fx:id="fieldContractEnd" promptText="optional"/>
+                        </HBox>
                     </VBox>
 
                     <!-- Notes -->
