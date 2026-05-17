@@ -14,6 +14,7 @@ public class RatePlan {
     private double ratePerKwh;
     private String notes;
     private boolean current;
+    private Double renewablePercent;
     private List<TierDiscount> discounts = new ArrayList<>();
 
     public RatePlan() {}
@@ -44,6 +45,9 @@ public class RatePlan {
 
     public boolean isCurrent()                            { return current; }
     public void setCurrent(boolean current)              { this.current = current; }
+
+    public Double getRenewablePercent()                       { return renewablePercent; }
+    public void setRenewablePercent(Double renewablePercent) { this.renewablePercent = renewablePercent; }
 
     public List<TierDiscount> getDiscounts()              { return discounts; }
     public void setDiscounts(List<TierDiscount> discounts) { this.discounts = discounts; }

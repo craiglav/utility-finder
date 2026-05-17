@@ -158,8 +158,8 @@ public class ComparisonController implements WorkspaceAware {
             comparisonGrid.add(planHeaderCell(summaries.get(i)), i + 1, 0);
         }
 
-        // Row labels (column 0, rows 1–4)
-        String[] labels = {"Annual Cost", "Avg ¢/kWh", "Highest Month", "Lowest Month"};
+        // Row labels (column 0, rows 1–5)
+        String[] labels = {"Annual Cost", "Avg ¢/kWh", "Highest Month", "Lowest Month", "Renewable"};
         for (int r = 0; r < labels.length; r++) {
             comparisonGrid.add(rowLabelCell(labels[r]), 0, r + 1);
         }
@@ -170,7 +170,15 @@ public class ComparisonController implements WorkspaceAware {
         int bestHighest = argMin(summaries, s -> s.highestMonth().totalCost());
         int bestLowest  = argMin(summaries, s -> s.lowestMonth().totalCost());
 
-        // Data cells (rows 1–4)
+        // Renewable: highest wins; only compete among plans that have a value
+        boolean anyRenewable = summaries.stream()
+                .anyMatch(s -> s.plan().getRenewablePercent() != null);
+        int bestRenewable = anyRenewable
+                ? argMax(summaries, s -> s.plan().getRenewablePercent() != null
+                        ? s.plan().getRenewablePercent() : -1.0)
+                : -1;
+
+        // Data cells (rows 1–5)
         for (int i = 0; i < n; i++) {
             PlanSummary s = summaries.get(i);
             int col = i + 1;
@@ -178,6 +186,9 @@ public class ComparisonController implements WorkspaceAware {
             comparisonGrid.add(dataCell(formatCents(s.effectiveAvgPerKwh()),    i == bestRate),    col, 2);
             comparisonGrid.add(dataCell(monthCostLabel(s.highestMonth()),       i == bestHighest), col, 3);
             comparisonGrid.add(dataCell(monthCostLabel(s.lowestMonth()),        i == bestLowest),  col, 4);
+            Double pct = s.plan().getRenewablePercent();
+            boolean renewBest = i == bestRenewable && pct != null;
+            comparisonGrid.add(dataCell(pct == null ? "—" : String.format("%.0f%%", pct), renewBest), col, 5);
         }
     }
 
@@ -437,6 +448,14 @@ public class ComparisonController implements WorkspaceAware {
                                java.util.function.ToDoubleFunction<PlanSummary> fn) {
         return IntStream.range(0, list.size())
                 .reduce((a, b) -> fn.applyAsDouble(list.get(a)) <= fn.applyAsDouble(list.get(b)) ? a : b)
+                .orElse(-1);
+    }
+
+    /** Returns the index of the plan with the maximum value of {@code fn}. */
+    private static int argMax(List<PlanSummary> list,
+                               java.util.function.ToDoubleFunction<PlanSummary> fn) {
+        return IntStream.range(0, list.size())
+                .reduce((a, b) -> fn.applyAsDouble(list.get(a)) >= fn.applyAsDouble(list.get(b)) ? a : b)
                 .orElse(-1);
     }
 

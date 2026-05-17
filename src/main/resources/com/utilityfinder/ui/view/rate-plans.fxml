@@ -28,8 +28,9 @@
                 <TableColumn fx:id="colPlanName" text="Plan"      prefWidth="160"/>
                 <TableColumn fx:id="colTerm"     text="Term"      prefWidth="80"  sortable="false"/>
                 <TableColumn fx:id="colBase"     text="Base"      prefWidth="90"  sortable="false"/>
-                <TableColumn fx:id="colRate"     text="Rate"      prefWidth="110" sortable="false"/>
-                <TableColumn fx:id="colActions"  text=""          prefWidth="220"
+                <TableColumn fx:id="colRate"      text="Rate"      prefWidth="110" sortable="false"/>
+                <TableColumn fx:id="colRenewable" text="Renewable" prefWidth="90"  sortable="false"/>
+                <TableColumn fx:id="colActions"   text=""          prefWidth="220"
                              sortable="false" resizable="false"/>
             </columns>
         </TableView>
@@ -70,6 +71,10 @@
                         <CheckBox fx:id="checkCurrent" text="Current plan"
                                   GridPane.rowIndex="2" GridPane.columnIndex="2"
                                   GridPane.columnSpan="2"/>
+
+                        <Label text="Renewable (%)"   GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                        <TextField fx:id="fieldRenewable" prefWidth="80" promptText="optional"
+                                   GridPane.rowIndex="3" GridPane.columnIndex="1"/>
                     </GridPane>
 
                     <!-- Discounts -->

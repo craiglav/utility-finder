@@ -71,6 +71,7 @@ public class Database {
             FOREIGN KEY (workspace_id) REFERENCES workspace(id) ON DELETE CASCADE
         )
         """,
+        "ALTER TABLE rate_plan ADD COLUMN IF NOT EXISTS renewable_percent DOUBLE",
         """
         CREATE TABLE IF NOT EXISTS tier_discount (
             id            BIGINT AUTO_INCREMENT PRIMARY KEY,

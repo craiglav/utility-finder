@@ -30,6 +30,7 @@ public class RatePlanController implements WorkspaceAware {
     @FXML private TableColumn<RatePlan, String> colTerm;
     @FXML private TableColumn<RatePlan, String> colBase;
     @FXML private TableColumn<RatePlan, String> colRate;
+    @FXML private TableColumn<RatePlan, String> colRenewable;
     @FXML private TableColumn<RatePlan, Void>   colActions;
 
     @FXML private Label     formTitle;
@@ -39,6 +40,7 @@ public class RatePlanController implements WorkspaceAware {
     @FXML private TextField fieldBase;
     @FXML private TextField fieldRate;
     @FXML private CheckBox  checkCurrent;
+    @FXML private TextField fieldRenewable;
     @FXML private VBox      discountRows;
     @FXML private TextArea  fieldNotes;
 
@@ -82,6 +84,10 @@ public class RatePlanController implements WorkspaceAware {
                 new SimpleStringProperty(String.format("$%.2f", c.getValue().getBaseCharge())));
         colRate.setCellValueFactory(c ->
                 new SimpleStringProperty(formatRate(c.getValue().getRatePerKwh())));
+        colRenewable.setCellValueFactory(c -> {
+            Double pct = c.getValue().getRenewablePercent();
+            return new SimpleStringProperty(pct == null ? "—" : String.format("%.0f%%", pct));
+        });
 
         colActions.setCellFactory(tc -> new TableCell<>() {
             private final Button editBtn   = new Button("Edit");
@@ -142,6 +148,14 @@ public class RatePlanController implements WorkspaceAware {
                 if (!nv.matches("\\d*\\.?\\d*")) f.setText(old);
             });
         }
+
+        // Renewable: 0–100 with optional decimal
+        fieldRenewable.textProperty().addListener((obs, old, nv) -> {
+            if (!nv.matches("\\d*\\.?\\d*")) { fieldRenewable.setText(old); return; }
+            try {
+                if (!nv.isEmpty() && Double.parseDouble(nv) > 100) fieldRenewable.setText(old);
+            } catch (NumberFormatException ignored) {}
+        });
     }
 
     @FXML
@@ -153,11 +167,12 @@ public class RatePlanController implements WorkspaceAware {
     @FXML
     private void handleSave() {
         // Collect and validate basic fields
-        String provider = fieldProvider.getText().strip();
-        String planName = fieldPlanName.getText().strip();
-        String termText = fieldTerm.getText().strip();
-        String baseText = fieldBase.getText().strip();
-        String rateText = fieldRate.getText().strip();
+        String provider       = fieldProvider.getText().strip();
+        String planName       = fieldPlanName.getText().strip();
+        String termText       = fieldTerm.getText().strip();
+        String baseText       = fieldBase.getText().strip();
+        String rateText       = fieldRate.getText().strip();
+        String renewableText  = fieldRenewable.getText().strip();
 
         if (provider.isEmpty()) { showError("Provider name is required."); fieldProvider.requestFocus(); return; }
         if (planName.isEmpty()) { showError("Plan name is required.");     fieldPlanName.requestFocus(); return; }
@@ -171,6 +186,16 @@ public class RatePlanController implements WorkspaceAware {
         } catch (NumberFormatException ex) {
             showError("Invalid number in Base Charge or Rate field.");
             return;
+        }
+
+        Double renewablePercent = null;
+        if (!renewableText.isEmpty()) {
+            try {
+                renewablePercent = Double.parseDouble(renewableText);
+            } catch (NumberFormatException ex) {
+                showError("Invalid number in Renewable (%) field.");
+                return;
+            }
         }
 
         Integer termMonths = null;
@@ -205,6 +230,7 @@ public class RatePlanController implements WorkspaceAware {
         plan.setRatePerKwh(rateCents / 100.0);
         plan.setNotes(fieldNotes.getText().strip().isEmpty() ? null : fieldNotes.getText().strip());
         plan.setCurrent(checkCurrent.isSelected());
+        plan.setRenewablePercent(renewablePercent);
         plan.setDiscounts(discounts);
 
         try {
@@ -246,6 +272,9 @@ public class RatePlanController implements WorkspaceAware {
         fieldRate.setText(String.format("%.4f", plan.getRatePerKwh() * 100)
                 .replaceAll("0+$", "").replaceAll("\\.$", ""));
         checkCurrent.setSelected(plan.isCurrent());
+        fieldRenewable.setText(plan.getRenewablePercent() == null ? ""
+                : String.format("%.4f", plan.getRenewablePercent())
+                        .replaceAll("0+$", "").replaceAll("\\.$", ""));
         fieldNotes.setText(plan.getNotes() == null ? "" : plan.getNotes());
 
         discountRowList.clear();
@@ -326,6 +355,7 @@ public class RatePlanController implements WorkspaceAware {
         fieldBase.clear();
         fieldRate.clear();
         checkCurrent.setSelected(false);
+        fieldRenewable.clear();
         fieldNotes.clear();
         discountRowList.clear();
         discountRows.getChildren().clear();

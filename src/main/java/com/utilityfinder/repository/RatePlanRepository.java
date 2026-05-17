@@ -13,7 +13,7 @@ public class RatePlanRepository {
     public List<RatePlan> findByWorkspace(long workspaceId) {
         String planSql =
             "SELECT id, workspace_id, provider_name, plan_name, contract_term_months, " +
-            "       base_charge, rate_per_kwh, notes, is_current " +
+            "       base_charge, rate_per_kwh, notes, is_current, renewable_percent " +
             "FROM rate_plan WHERE workspace_id = ? ORDER BY provider_name, plan_name";
         String discSql =
             "SELECT td.id, td.rate_plan_id, td.threshold_kwh, td.discount_amt, td.sort_order " +
@@ -52,7 +52,7 @@ public class RatePlanRepository {
     public Optional<RatePlan> findById(long id) {
         String planSql =
             "SELECT id, workspace_id, provider_name, plan_name, contract_term_months, " +
-            "       base_charge, rate_per_kwh, notes, is_current FROM rate_plan WHERE id = ?";
+            "       base_charge, rate_per_kwh, notes, is_current, renewable_percent FROM rate_plan WHERE id = ?";
         String discSql =
             "SELECT id, rate_plan_id, threshold_kwh, discount_amt, sort_order " +
             "FROM tier_discount WHERE rate_plan_id = ? ORDER BY sort_order";
@@ -83,8 +83,8 @@ public class RatePlanRepository {
     public RatePlan save(RatePlan plan) {
         String sql =
             "INSERT INTO rate_plan (workspace_id, provider_name, plan_name, contract_term_months, " +
-            "                       base_charge, rate_per_kwh, notes, is_current) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            "                       base_charge, rate_per_kwh, notes, is_current, renewable_percent) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = Database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             bindPlan(ps, plan);
@@ -102,7 +102,8 @@ public class RatePlanRepository {
     public void update(RatePlan plan) {
         String sql =
             "UPDATE rate_plan SET provider_name = ?, plan_name = ?, contract_term_months = ?, " +
-            "                     base_charge = ?, rate_per_kwh = ?, notes = ?, is_current = ? " +
+            "                     base_charge = ?, rate_per_kwh = ?, notes = ?, is_current = ?, " +
+            "                     renewable_percent = ? " +
             "WHERE id = ?";
         try (Connection conn = Database.getConnection()) {
             conn.setAutoCommit(false);
@@ -115,7 +116,8 @@ public class RatePlanRepository {
                     ps.setDouble(5, plan.getRatePerKwh());
                     setNullableString(ps, 6, plan.getNotes());
                     ps.setBoolean(7, plan.isCurrent());
-                    ps.setLong(8, plan.getId());
+                    setNullableDouble(ps, 8, plan.getRenewablePercent());
+                    ps.setLong(9, plan.getId());
                     ps.executeUpdate();
                 }
                 deleteDiscounts(conn, plan.getId());
@@ -246,6 +248,7 @@ public class RatePlanRepository {
         ps.setDouble(6, plan.getRatePerKwh());
         setNullableString(ps, 7, plan.getNotes());
         ps.setBoolean(8, plan.isCurrent());
+        setNullableDouble(ps, 9, plan.getRenewablePercent());
     }
 
     private void setNullableInt(PreparedStatement ps, int idx, Integer value) throws SQLException {
@@ -256,6 +259,11 @@ public class RatePlanRepository {
     private void setNullableString(PreparedStatement ps, int idx, String value) throws SQLException {
         if (value == null || value.isBlank()) ps.setNull(idx, Types.VARCHAR);
         else ps.setString(idx, value);
+    }
+
+    private void setNullableDouble(PreparedStatement ps, int idx, Double value) throws SQLException {
+        if (value == null) ps.setNull(idx, Types.DOUBLE);
+        else ps.setDouble(idx, value);
     }
 
     private RatePlan mapPlan(ResultSet rs) throws SQLException {
@@ -270,6 +278,8 @@ public class RatePlanRepository {
         p.setRatePerKwh(rs.getDouble("rate_per_kwh"));
         p.setNotes(rs.getString("notes"));
         p.setCurrent(rs.getBoolean("is_current"));
+        double renewable = rs.getDouble("renewable_percent");
+        p.setRenewablePercent(rs.wasNull() ? null : renewable);
         return p;
     }
 
