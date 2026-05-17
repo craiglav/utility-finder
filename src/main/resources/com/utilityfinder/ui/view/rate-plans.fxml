@@ -75,6 +75,17 @@
                         <Label text="Renewable (%)"   GridPane.rowIndex="3" GridPane.columnIndex="0"/>
                         <TextField fx:id="fieldRenewable" prefWidth="80" promptText="optional"
                                    GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+
+                        <Label text="Contract End"   GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+                        <DatePicker fx:id="fieldContractEnd" promptText="optional"
+                                    GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+                        <Label text="Flat Exit Fee ($)" GridPane.rowIndex="4" GridPane.columnIndex="2"/>
+                        <TextField fx:id="fieldTermFeeFlat" prefWidth="100" promptText="optional"
+                                   GridPane.rowIndex="4" GridPane.columnIndex="3"/>
+
+                        <Label text="Exit Fee/Month ($)" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+                        <TextField fx:id="fieldTermFeePerMonth" prefWidth="100" promptText="optional"
+                                   GridPane.rowIndex="5" GridPane.columnIndex="1"/>
                     </GridPane>
 
                     <!-- Discounts -->

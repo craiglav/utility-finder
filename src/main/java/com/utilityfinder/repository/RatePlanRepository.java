@@ -4,6 +4,7 @@ import com.utilityfinder.model.RatePlan;
 import com.utilityfinder.model.TierDiscount;
 
 import java.sql.*;
+import java.time.LocalDate;
 import java.util.*;
 
 public class RatePlanRepository {
@@ -13,7 +14,8 @@ public class RatePlanRepository {
     public List<RatePlan> findByWorkspace(long workspaceId) {
         String planSql =
             "SELECT id, workspace_id, provider_name, plan_name, contract_term_months, " +
-            "       base_charge, rate_per_kwh, notes, is_current, renewable_percent " +
+            "       base_charge, rate_per_kwh, notes, is_current, renewable_percent, " +
+            "       termination_fee_flat, termination_fee_per_month, contract_end_date " +
             "FROM rate_plan WHERE workspace_id = ? ORDER BY provider_name, plan_name";
         String discSql =
             "SELECT td.id, td.rate_plan_id, td.threshold_kwh, td.discount_amt, td.sort_order " +
@@ -52,7 +54,9 @@ public class RatePlanRepository {
     public Optional<RatePlan> findById(long id) {
         String planSql =
             "SELECT id, workspace_id, provider_name, plan_name, contract_term_months, " +
-            "       base_charge, rate_per_kwh, notes, is_current, renewable_percent FROM rate_plan WHERE id = ?";
+            "       base_charge, rate_per_kwh, notes, is_current, renewable_percent, " +
+            "       termination_fee_flat, termination_fee_per_month, contract_end_date " +
+            "FROM rate_plan WHERE id = ?";
         String discSql =
             "SELECT id, rate_plan_id, threshold_kwh, discount_amt, sort_order " +
             "FROM tier_discount WHERE rate_plan_id = ? ORDER BY sort_order";
@@ -83,8 +87,9 @@ public class RatePlanRepository {
     public RatePlan save(RatePlan plan) {
         String sql =
             "INSERT INTO rate_plan (workspace_id, provider_name, plan_name, contract_term_months, " +
-            "                       base_charge, rate_per_kwh, notes, is_current, renewable_percent) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            "                       base_charge, rate_per_kwh, notes, is_current, renewable_percent, " +
+            "                       termination_fee_flat, termination_fee_per_month, contract_end_date) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = Database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             bindPlan(ps, plan);
@@ -103,7 +108,8 @@ public class RatePlanRepository {
         String sql =
             "UPDATE rate_plan SET provider_name = ?, plan_name = ?, contract_term_months = ?, " +
             "                     base_charge = ?, rate_per_kwh = ?, notes = ?, is_current = ?, " +
-            "                     renewable_percent = ? " +
+            "                     renewable_percent = ?, termination_fee_flat = ?, " +
+            "                     termination_fee_per_month = ?, contract_end_date = ? " +
             "WHERE id = ?";
         try (Connection conn = Database.getConnection()) {
             conn.setAutoCommit(false);
@@ -117,7 +123,10 @@ public class RatePlanRepository {
                     setNullableString(ps, 6, plan.getNotes());
                     ps.setBoolean(7, plan.isCurrent());
                     setNullableDouble(ps, 8, plan.getRenewablePercent());
-                    ps.setLong(9, plan.getId());
+                    setNullableDouble(ps, 9, plan.getTerminationFeeFlat());
+                    setNullableDouble(ps, 10, plan.getTerminationFeePerMonth());
+                    setNullableDate(ps, 11, plan.getContractEndDate());
+                    ps.setLong(12, plan.getId());
                     ps.executeUpdate();
                 }
                 deleteDiscounts(conn, plan.getId());
@@ -249,6 +258,9 @@ public class RatePlanRepository {
         setNullableString(ps, 7, plan.getNotes());
         ps.setBoolean(8, plan.isCurrent());
         setNullableDouble(ps, 9, plan.getRenewablePercent());
+        setNullableDouble(ps, 10, plan.getTerminationFeeFlat());
+        setNullableDouble(ps, 11, plan.getTerminationFeePerMonth());
+        setNullableDate(ps, 12, plan.getContractEndDate());
     }
 
     private void setNullableInt(PreparedStatement ps, int idx, Integer value) throws SQLException {
@@ -266,6 +278,11 @@ public class RatePlanRepository {
         else ps.setDouble(idx, value);
     }
 
+    private void setNullableDate(PreparedStatement ps, int idx, LocalDate value) throws SQLException {
+        if (value == null) ps.setNull(idx, Types.DATE);
+        else ps.setDate(idx, java.sql.Date.valueOf(value));
+    }
+
     private RatePlan mapPlan(ResultSet rs) throws SQLException {
         RatePlan p = new RatePlan();
         p.setId(rs.getLong("id"));
@@ -280,6 +297,12 @@ public class RatePlanRepository {
         p.setCurrent(rs.getBoolean("is_current"));
         double renewable = rs.getDouble("renewable_percent");
         p.setRenewablePercent(rs.wasNull() ? null : renewable);
+        double termFlat = rs.getDouble("termination_fee_flat");
+        p.setTerminationFeeFlat(rs.wasNull() ? null : termFlat);
+        double termPerMonth = rs.getDouble("termination_fee_per_month");
+        p.setTerminationFeePerMonth(rs.wasNull() ? null : termPerMonth);
+        java.sql.Date endDate = rs.getDate("contract_end_date");
+        p.setContractEndDate(endDate != null ? endDate.toLocalDate() : null);
         return p;
     }
 

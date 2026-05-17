@@ -72,6 +72,9 @@ public class Database {
         )
         """,
         "ALTER TABLE rate_plan ADD COLUMN IF NOT EXISTS renewable_percent DOUBLE",
+        "ALTER TABLE rate_plan ADD COLUMN IF NOT EXISTS termination_fee_flat DOUBLE",
+        "ALTER TABLE rate_plan ADD COLUMN IF NOT EXISTS termination_fee_per_month DOUBLE",
+        "ALTER TABLE rate_plan ADD COLUMN IF NOT EXISTS contract_end_date DATE",
         """
         CREATE TABLE IF NOT EXISTS tier_discount (
             id            BIGINT AUTO_INCREMENT PRIMARY KEY,

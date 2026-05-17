@@ -17,6 +17,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,9 +41,12 @@ public class RatePlanController implements WorkspaceAware {
     @FXML private TextField fieldBase;
     @FXML private TextField fieldRate;
     @FXML private CheckBox  checkCurrent;
-    @FXML private TextField fieldRenewable;
-    @FXML private VBox      discountRows;
-    @FXML private TextArea  fieldNotes;
+    @FXML private TextField  fieldRenewable;
+    @FXML private DatePicker fieldContractEnd;
+    @FXML private TextField  fieldTermFeeFlat;
+    @FXML private TextField  fieldTermFeePerMonth;
+    @FXML private VBox       discountRows;
+    @FXML private TextArea   fieldNotes;
 
     // ── State ─────────────────────────────────────────────────────────────────
 
@@ -156,6 +160,13 @@ public class RatePlanController implements WorkspaceAware {
                 if (!nv.isEmpty() && Double.parseDouble(nv) > 100) fieldRenewable.setText(old);
             } catch (NumberFormatException ignored) {}
         });
+
+        // Termination fee fields: non-negative decimal
+        for (TextField f : new TextField[]{fieldTermFeeFlat, fieldTermFeePerMonth}) {
+            f.textProperty().addListener((obs, old, nv) -> {
+                if (!nv.matches("\\d*\\.?\\d*")) f.setText(old);
+            });
+        }
     }
 
     @FXML
@@ -167,12 +178,14 @@ public class RatePlanController implements WorkspaceAware {
     @FXML
     private void handleSave() {
         // Collect and validate basic fields
-        String provider       = fieldProvider.getText().strip();
-        String planName       = fieldPlanName.getText().strip();
-        String termText       = fieldTerm.getText().strip();
-        String baseText       = fieldBase.getText().strip();
-        String rateText       = fieldRate.getText().strip();
-        String renewableText  = fieldRenewable.getText().strip();
+        String provider          = fieldProvider.getText().strip();
+        String planName          = fieldPlanName.getText().strip();
+        String termText          = fieldTerm.getText().strip();
+        String baseText          = fieldBase.getText().strip();
+        String rateText          = fieldRate.getText().strip();
+        String renewableText     = fieldRenewable.getText().strip();
+        String termFeeFlatText   = fieldTermFeeFlat.getText().strip();
+        String termFeeMonthText  = fieldTermFeePerMonth.getText().strip();
 
         if (provider.isEmpty()) { showError("Provider name is required."); fieldProvider.requestFocus(); return; }
         if (planName.isEmpty()) { showError("Plan name is required.");     fieldPlanName.requestFocus(); return; }
@@ -197,6 +210,28 @@ public class RatePlanController implements WorkspaceAware {
                 return;
             }
         }
+
+        Double terminationFeeFlat = null;
+        if (!termFeeFlatText.isEmpty()) {
+            try {
+                terminationFeeFlat = Double.parseDouble(termFeeFlatText);
+            } catch (NumberFormatException ex) {
+                showError("Invalid number in Flat Exit Fee field.");
+                return;
+            }
+        }
+
+        Double terminationFeePerMonth = null;
+        if (!termFeeMonthText.isEmpty()) {
+            try {
+                terminationFeePerMonth = Double.parseDouble(termFeeMonthText);
+            } catch (NumberFormatException ex) {
+                showError("Invalid number in Exit Fee/Month field.");
+                return;
+            }
+        }
+
+        LocalDate contractEndDate = fieldContractEnd.getValue();
 
         Integer termMonths = null;
         if (!termText.isEmpty()) {
@@ -231,6 +266,9 @@ public class RatePlanController implements WorkspaceAware {
         plan.setNotes(fieldNotes.getText().strip().isEmpty() ? null : fieldNotes.getText().strip());
         plan.setCurrent(checkCurrent.isSelected());
         plan.setRenewablePercent(renewablePercent);
+        plan.setTerminationFeeFlat(terminationFeeFlat);
+        plan.setTerminationFeePerMonth(terminationFeePerMonth);
+        plan.setContractEndDate(contractEndDate);
         plan.setDiscounts(discounts);
 
         try {
@@ -274,6 +312,13 @@ public class RatePlanController implements WorkspaceAware {
         checkCurrent.setSelected(plan.isCurrent());
         fieldRenewable.setText(plan.getRenewablePercent() == null ? ""
                 : String.format("%.4f", plan.getRenewablePercent())
+                        .replaceAll("0+$", "").replaceAll("\\.$", ""));
+        fieldContractEnd.setValue(plan.getContractEndDate());
+        fieldTermFeeFlat.setText(plan.getTerminationFeeFlat() == null ? ""
+                : String.format("%.2f", plan.getTerminationFeeFlat())
+                        .replaceAll("0+$", "").replaceAll("\\.$", ""));
+        fieldTermFeePerMonth.setText(plan.getTerminationFeePerMonth() == null ? ""
+                : String.format("%.2f", plan.getTerminationFeePerMonth())
                         .replaceAll("0+$", "").replaceAll("\\.$", ""));
         fieldNotes.setText(plan.getNotes() == null ? "" : plan.getNotes());
 
@@ -356,6 +401,9 @@ public class RatePlanController implements WorkspaceAware {
         fieldRate.clear();
         checkCurrent.setSelected(false);
         fieldRenewable.clear();
+        fieldContractEnd.setValue(null);
+        fieldTermFeeFlat.clear();
+        fieldTermFeePerMonth.clear();
         fieldNotes.clear();
         discountRowList.clear();
         discountRows.getChildren().clear();

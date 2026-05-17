@@ -1,5 +1,6 @@
 package com.utilityfinder.model;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,6 +16,9 @@ public class RatePlan {
     private String notes;
     private boolean current;
     private Double renewablePercent;
+    private Double terminationFeeFlat;
+    private Double terminationFeePerMonth;
+    private LocalDate contractEndDate;
     private List<TierDiscount> discounts = new ArrayList<>();
 
     public RatePlan() {}
@@ -48,6 +52,15 @@ public class RatePlan {
 
     public Double getRenewablePercent()                       { return renewablePercent; }
     public void setRenewablePercent(Double renewablePercent) { this.renewablePercent = renewablePercent; }
+
+    public Double getTerminationFeeFlat()                             { return terminationFeeFlat; }
+    public void setTerminationFeeFlat(Double terminationFeeFlat)     { this.terminationFeeFlat = terminationFeeFlat; }
+
+    public Double getTerminationFeePerMonth()                                 { return terminationFeePerMonth; }
+    public void setTerminationFeePerMonth(Double terminationFeePerMonth)     { this.terminationFeePerMonth = terminationFeePerMonth; }
+
+    public LocalDate getContractEndDate()                            { return contractEndDate; }
+    public void setContractEndDate(LocalDate contractEndDate)       { this.contractEndDate = contractEndDate; }
 
     public List<TierDiscount> getDiscounts()              { return discounts; }
     public void setDiscounts(List<TierDiscount> discounts) { this.discounts = discounts; }

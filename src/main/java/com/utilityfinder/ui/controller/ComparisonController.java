@@ -28,6 +28,7 @@ import java.time.format.TextStyle;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.OptionalInt;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -103,7 +104,9 @@ public class ComparisonController implements WorkspaceAware {
             return;
         }
 
-        summaries = service.compare(workspace.getId());
+        summaries = service.compare(workspace.getId()).stream()
+                .sorted(Comparator.comparing(s -> !s.plan().isCurrent()))
+                .toList();
 
         // Usage info label
         List<Integer> years = Services.get().usage.findByWorkspace(workspace.getId())
@@ -158,8 +161,8 @@ public class ComparisonController implements WorkspaceAware {
             comparisonGrid.add(planHeaderCell(summaries.get(i)), i + 1, 0);
         }
 
-        // Row labels (column 0, rows 1–5)
-        String[] labels = {"Annual Cost", "Avg ¢/kWh", "Highest Month", "Lowest Month", "Renewable"};
+        // Row labels (column 0, rows 1–7)
+        String[] labels = {"Annual Cost", "vs. Current", "Exit Fee", "Avg ¢/kWh", "Highest Month", "Lowest Month", "Renewable"};
         for (int r = 0; r < labels.length; r++) {
             comparisonGrid.add(rowLabelCell(labels[r]), 0, r + 1);
         }
@@ -178,17 +181,25 @@ public class ComparisonController implements WorkspaceAware {
                         ? s.plan().getRenewablePercent() : -1.0)
                 : -1;
 
-        // Data cells (rows 1–5)
+        // Current plan index + annual cost (for vs. Current row)
+        OptionalInt currentIdx = IntStream.range(0, n)
+                .filter(i -> summaries.get(i).plan().isCurrent())
+                .findFirst();
+        double currentAnnual = currentIdx.isPresent() ? summaries.get(currentIdx.getAsInt()).annualCost() : Double.NaN;
+
+        // Data cells (rows 1–7)
         for (int i = 0; i < n; i++) {
             PlanSummary s = summaries.get(i);
             int col = i + 1;
             comparisonGrid.add(dataCell(formatDollars(s.annualCost()),          i == bestAnnual),  col, 1);
-            comparisonGrid.add(dataCell(formatCents(s.effectiveAvgPerKwh()),    i == bestRate),    col, 2);
-            comparisonGrid.add(dataCell(monthCostLabel(s.highestMonth()),       i == bestHighest), col, 3);
-            comparisonGrid.add(dataCell(monthCostLabel(s.lowestMonth()),        i == bestLowest),  col, 4);
+            comparisonGrid.add(deltaCell(s, currentAnnual),                                        col, 2);
+            comparisonGrid.add(exitFeeCell(s),                                                     col, 3);
+            comparisonGrid.add(dataCell(formatCents(s.effectiveAvgPerKwh()),    i == bestRate),    col, 4);
+            comparisonGrid.add(dataCell(monthCostLabel(s.highestMonth()),       i == bestHighest), col, 5);
+            comparisonGrid.add(dataCell(monthCostLabel(s.lowestMonth()),        i == bestLowest),  col, 6);
             Double pct = s.plan().getRenewablePercent();
             boolean renewBest = i == bestRenewable && pct != null;
-            comparisonGrid.add(dataCell(pct == null ? "—" : String.format("%.0f%%", pct), renewBest), col, 5);
+            comparisonGrid.add(dataCell(pct == null ? "—" : String.format("%.0f%%", pct), renewBest), col, 7);
         }
     }
 
@@ -247,6 +258,34 @@ public class ComparisonController implements WorkspaceAware {
                 ? "-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold;"
                 : "-fx-background-color: white; -fx-text-fill: #2c3e50;");
         return l;
+    }
+
+    private Node deltaCell(PlanSummary s, double currentAnnual) {
+        if (s.plan().isCurrent() || Double.isNaN(currentAnnual)) {
+            return dataCell("—", false);
+        }
+        double delta = s.annualCost() - currentAnnual;
+        Label l = new Label();
+        l.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        l.setPadding(new Insets(10, 14, 10, 14));
+        if (delta < 0) {
+            l.setText(String.format("−$%,.2f ▼", -delta));
+            l.setStyle("-fx-background-color: white; -fx-text-fill: #27ae60; -fx-font-weight: bold;");
+        } else if (delta > 0) {
+            l.setText(String.format("+$%,.2f ▲", delta));
+            l.setStyle("-fx-background-color: white; -fx-text-fill: #e74c3c; -fx-font-weight: bold;");
+        } else {
+            l.setText("—");
+            l.setStyle("-fx-background-color: white; -fx-text-fill: #2c3e50;");
+        }
+        return l;
+    }
+
+    private Node exitFeeCell(PlanSummary s) {
+        if (s.plan().isCurrent() && s.terminationFee() > 0) {
+            return dataCell(formatDollars(s.terminationFee()), false);
+        }
+        return dataCell("—", false);
     }
 
     private void showInfoGrid(String message) {

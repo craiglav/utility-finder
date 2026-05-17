@@ -10,6 +10,7 @@ import java.util.List;
 public record PlanSummary(
         RatePlan plan,
         double annualCost,
+        double terminationFee,
         MonthlyEstimate highestMonth,
         MonthlyEstimate lowestMonth,
         double effectiveAvgPerKwh,

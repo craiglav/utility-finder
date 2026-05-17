@@ -6,7 +6,9 @@ import com.utilityfinder.model.RatePlan;
 import com.utilityfinder.model.TierDiscount;
 
 import java.time.Month;
+import java.time.YearMonth;
 import java.time.format.TextStyle;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -62,7 +64,17 @@ public class ComparisonService {
         double totalKwh = Arrays.stream(profile).sum();
         double effectiveRate = totalKwh > 0 ? annual / totalKwh : 0;
 
-        return new PlanSummary(plan, annual, highest, lowest, effectiveRate,
+        double terminationFee = 0;
+        if (plan.isCurrent()) {
+            long remaining = plan.getContractEndDate() != null
+                    ? Math.max(0, ChronoUnit.MONTHS.between(
+                            YearMonth.now(), YearMonth.from(plan.getContractEndDate())))
+                    : 0;
+            if (plan.getTerminationFeeFlat() != null)     terminationFee += plan.getTerminationFeeFlat();
+            if (plan.getTerminationFeePerMonth() != null) terminationFee += plan.getTerminationFeePerMonth() * remaining;
+        }
+
+        return new PlanSummary(plan, annual, terminationFee, highest, lowest, effectiveRate,
                 estimates, estimatedNames);
     }
 
