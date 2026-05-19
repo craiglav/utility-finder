@@ -84,6 +84,20 @@ public class Database {
             sort_order    INT    NOT NULL DEFAULT 0,
             FOREIGN KEY (rate_plan_id) REFERENCES rate_plan(id) ON DELETE CASCADE
         )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS interval_record (
+            id           BIGINT    AUTO_INCREMENT PRIMARY KEY,
+            workspace_id BIGINT    NOT NULL,
+            esiid        VARCHAR(50),
+            reading_date DATE      NOT NULL,
+            start_minute SMALLINT  NOT NULL,
+            kwh          DOUBLE    NOT NULL,
+            estimated    BOOLEAN   NOT NULL DEFAULT FALSE,
+            imported_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (workspace_id) REFERENCES workspace(id) ON DELETE CASCADE,
+            UNIQUE (workspace_id, reading_date, start_minute)
+        )
         """
     );
 }

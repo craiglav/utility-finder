@@ -1,58 +1,96 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.scene.chart.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
 
 <VBox xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.utilityfinder.ui.controller.UsageController"
-      spacing="12" style="-fx-padding: 0;">
+      spacing="0" style="-fx-padding: 0;">
 
-    <!-- Header -->
-    <HBox alignment="CENTER_LEFT" spacing="12">
+    <!-- Toolbar -->
+    <HBox alignment="CENTER_LEFT" spacing="12"
+          style="-fx-padding: 0 0 12 0;">
         <Label text="Usage Data"
                style="-fx-font-size: 16; -fx-font-weight: bold;"/>
         <Region HBox.hgrow="ALWAYS"/>
-        <Button text="+ Add Entry" onAction="#handleAddEntry" mnemonicParsing="false"/>
+        <Button fx:id="importBtn" text="Import CSV…" onAction="#handleImport"
+                mnemonicParsing="false"/>
     </HBox>
 
-    <!-- Record tree table -->
-    <TreeTableView fx:id="usageTable" VBox.vgrow="ALWAYS" showRoot="false">
-        <placeholder>
-            <Label text="No usage data yet — click '+ Add Entry' to get started."/>
-        </placeholder>
-        <columns>
-            <TreeTableColumn fx:id="colGroup"   text="Month"  prefWidth="200" sortable="false"/>
-            <TreeTableColumn fx:id="colKwh"     text="kWh"    prefWidth="120" sortable="false"/>
-            <TreeTableColumn fx:id="colActions" text=""       prefWidth="170"
-                             sortable="false" resizable="false"/>
-        </columns>
-    </TreeTableView>
+    <!-- Status banner — visible only when interval data is loaded -->
+    <HBox fx:id="statusBanner" alignment="CENTER_LEFT" spacing="16"
+          style="-fx-background-color: #eaf4fb; -fx-border-color: #aed6f1;
+                 -fx-border-width: 1; -fx-background-radius: 4; -fx-border-radius: 4;
+                 -fx-padding: 10 14 10 14;">
+        <VBox spacing="3">
+            <Label fx:id="esiidLabel"    style="-fx-font-weight: bold; -fx-font-size: 12;"/>
+            <Label fx:id="coverageLabel" style="-fx-text-fill: #2c3e50; -fx-font-size: 12;"/>
+            <Label fx:id="importedLabel" style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;"/>
+        </VBox>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="clearBtn" text="Clear Data" onAction="#handleClear"
+                mnemonicParsing="false"
+                style="-fx-text-fill: #e74c3c;"/>
+    </HBox>
 
-    <!-- Averaged profile -->
-    <VBox spacing="6"
-          style="-fx-background-color: white; -fx-padding: 12; -fx-background-radius: 4;">
-        <Label text="Averaged Profile  (used for rate comparisons)"
-               style="-fx-font-weight: bold; -fx-font-size: 12;"/>
-        <VBox fx:id="profileContainer" spacing="6"/>
+    <!-- Empty state — visible when no data has been imported -->
+    <VBox fx:id="emptyPane" alignment="CENTER" spacing="16" VBox.vgrow="ALWAYS"
+          style="-fx-padding: 40;">
+        <Label text="No interval data imported yet."
+               style="-fx-font-size: 14; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+        <VBox spacing="6"
+              style="-fx-background-color: white; -fx-padding: 20; -fx-background-radius: 6;
+                     -fx-border-color: #dce1e7; -fx-border-radius: 6; -fx-max-width: 520;">
+            <Label text="How to download your data from Smart Meter Texas:"
+                   style="-fx-font-weight: bold; -fx-font-size: 12; -fx-padding: 0 0 6 0;"/>
+            <Label text="1.  Visit  smartmetertexas.com  and log in (free account for any Texas resident)."
+                   style="-fx-font-size: 12;" wrapText="true"/>
+            <Label text="2.  Go to  My Account  →  Usage  →  Green Button Data."
+                   style="-fx-font-size: 12;" wrapText="true"/>
+            <Label text="3.  Select  15-Minute Interval Data  and choose the last 24 months."
+                   style="-fx-font-size: 12;" wrapText="true"/>
+            <Label text="4.  Click  Download  and save the CSV file to your computer."
+                   style="-fx-font-size: 12;" wrapText="true"/>
+            <Label text="5.  Click  Import CSV…  above (or below) and select the file."
+                   style="-fx-font-size: 12;" wrapText="true"/>
+        </VBox>
+        <Button text="Import CSV…" onAction="#handleImport" mnemonicParsing="false"
+                defaultButton="true"
+                style="-fx-font-size: 13; -fx-padding: 8 24;"/>
     </VBox>
 
-    <!-- Entry form -->
-    <VBox spacing="8"
-          style="-fx-background-color: white; -fx-padding: 12; -fx-background-radius: 4;">
-        <Label fx:id="formTitle" text="Add Entry"
-               style="-fx-font-weight: bold;"/>
-        <HBox spacing="10" alignment="CENTER_LEFT">
-            <Label text="Year"/>
-            <TextField fx:id="fieldYear" prefWidth="72"/>
-            <Label text="Month"/>
-            <ComboBox fx:id="fieldMonth" prefWidth="140"/>
-            <Label text="kWh"/>
-            <TextField fx:id="fieldKwh" prefWidth="90"/>
-            <Button text="Save"   onAction="#handleSave"   defaultButton="true" mnemonicParsing="false"/>
-            <Button text="Cancel" onAction="#handleCancel" mnemonicParsing="false"/>
-        </HBox>
-        <Label text="Tab: next field  •  Enter: save (auto-advances month)  •  F2: edit selected  •  Del: delete selected"
-               style="-fx-text-fill: #95a5a6; -fx-font-size: 11;"/>
+    <!-- Data pane — visible when interval data is present -->
+    <VBox fx:id="dataPane" spacing="12" VBox.vgrow="ALWAYS">
+
+        <!-- Monthly usage bar chart -->
+        <BarChart fx:id="usageChart" animated="false" legendVisible="false"
+                  prefHeight="220" maxHeight="220"
+                  style="-fx-background-color: white; -fx-padding: 4;">
+            <xAxis>
+                <CategoryAxis fx:id="chartXAxis" side="BOTTOM"/>
+            </xAxis>
+            <yAxis>
+                <NumberAxis fx:id="chartYAxis" label="kWh" forceZeroInRange="true"/>
+            </yAxis>
+        </BarChart>
+
+        <!-- Monthly summary table -->
+        <TableView fx:id="monthTable" VBox.vgrow="ALWAYS"
+                   style="-fx-font-size: 12;">
+            <placeholder>
+                <Label text="No data."/>
+            </placeholder>
+            <columns>
+                <TableColumn fx:id="colMonth"    text="Month"      prefWidth="160" sortable="false"/>
+                <TableColumn fx:id="colTotalKwh" text="Total kWh"  prefWidth="130" sortable="false"/>
+                <TableColumn fx:id="colDailyAvg" text="Daily Avg"  prefWidth="110" sortable="false"/>
+                <TableColumn fx:id="colDays"     text="Days"       prefWidth="70"  sortable="false"/>
+                <TableColumn fx:id="colPeak"     text="Peak Day"   prefWidth="200" sortable="false"/>
+            </columns>
+        </TableView>
+
     </VBox>
 
 </VBox>

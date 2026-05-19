@@ -93,10 +93,10 @@ public class ComparisonController implements WorkspaceAware {
         if (workspace == null) return;
 
         // Precondition checks before running comparison
-        boolean hasUsage = !Services.get().usage.findByWorkspace(workspace.getId()).isEmpty();
+        boolean hasUsage = Services.get().intervals.hasData(workspace.getId());
         if (!hasUsage) {
             clearMeta();
-            showInfoGrid("No usage data found. Add usage records in the Usage Data view first.");
+            showInfoGrid("No usage data found. Import interval data in the Usage Data view first.");
             return;
         }
         boolean hasPlans = !Services.get().ratePlans.findByWorkspace(workspace.getId()).isEmpty();
@@ -111,8 +111,7 @@ public class ComparisonController implements WorkspaceAware {
                 .toList();
 
         // Usage info label
-        List<Integer> years = Services.get().usage.findByWorkspace(workspace.getId())
-                .stream().map(r -> r.getYear()).distinct().sorted().toList();
+        List<Integer> years = Services.get().intervals.getDistinctYears(workspace.getId());
         usageInfoLabel.setText("Based on " + years.size() + " year"
                 + (years.size() == 1 ? "" : "s") + " of data"
                 + (years.isEmpty() ? "" : "  (" + years.get(0) + " – " + years.get(years.size() - 1) + ")"));

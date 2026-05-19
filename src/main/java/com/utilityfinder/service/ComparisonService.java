@@ -16,16 +16,16 @@ import java.util.Locale;
 
 public class ComparisonService {
 
-    private final UsageService usageService;
+    private final IntervalService intervalService;
     private final RatePlanService ratePlanService;
 
-    public ComparisonService(UsageService usageService, RatePlanService ratePlanService) {
-        this.usageService = usageService;
+    public ComparisonService(IntervalService intervalService, RatePlanService ratePlanService) {
+        this.intervalService = intervalService;
         this.ratePlanService = ratePlanService;
     }
 
     public List<PlanSummary> compare(long workspaceId) {
-        double[] rawProfile = usageService.getAveragedProfile(workspaceId);
+        double[] rawProfile = intervalService.getAveragedProfile(workspaceId);
         double[] profile = substituteGlobalAverage(rawProfile);
         List<RatePlan> plans = ratePlanService.findByWorkspace(workspaceId);
 

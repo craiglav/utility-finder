@@ -30,3 +30,6 @@ Thumbs.db
 
 # Maven wrapper
 !.mvn/wrapper/maven-wrapper.jar
+
+# SmartMeter data files
+/IntervalData.csv

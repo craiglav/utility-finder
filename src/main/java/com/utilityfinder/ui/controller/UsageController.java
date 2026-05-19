@@ -1,342 +1,310 @@
 package com.utilityfinder.ui.controller;
 
 import com.utilityfinder.app.Services;
-import com.utilityfinder.model.UsageRecord;
+import com.utilityfinder.model.ImportResult;
+import com.utilityfinder.model.MonthSummary;
 import com.utilityfinder.model.Workspace;
-import com.utilityfinder.service.UsageService;
+import com.utilityfinder.service.IntervalImportService;
+import com.utilityfinder.service.IntervalService;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
-import javafx.geometry.Pos;
+import javafx.geometry.Insets;
+import javafx.scene.chart.BarChart;
+import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
-import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
 
+import java.io.File;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.Month;
+import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
-import java.util.Arrays;
-import java.util.Comparator;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 
 public class UsageController implements WorkspaceAware {
 
-    private static final List<String> MONTH_NAMES = List.of(
-            "January", "February", "March", "April", "May", "June",
-            "July", "August", "September", "October", "November", "December");
+    // ── FXML ──────────────────────────────────────────────────────────────────
 
-    private static final String[] MONTH_ABBR = {
-            "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+    @FXML private Button                      importBtn;
+    @FXML private HBox                        statusBanner;
+    @FXML private Label                       esiidLabel;
+    @FXML private Label                       coverageLabel;
+    @FXML private Label                       importedLabel;
+    @FXML private Button                      clearBtn;
+    @FXML private VBox                        emptyPane;
+    @FXML private VBox                        dataPane;
+    @FXML private BarChart<String, Number>    usageChart;
+    @FXML private CategoryAxis                chartXAxis;
+    @FXML private NumberAxis                  chartYAxis;
+    @FXML private TableView<UsageRow>         monthTable;
+    @FXML private TableColumn<UsageRow, String> colMonth;
+    @FXML private TableColumn<UsageRow, String> colTotalKwh;
+    @FXML private TableColumn<UsageRow, String> colDailyAvg;
+    @FXML private TableColumn<UsageRow, String> colDays;
+    @FXML private TableColumn<UsageRow, String> colPeak;
 
-    @FXML private TreeTableView<UsageRow>           usageTable;
-    @FXML private TreeTableColumn<UsageRow, String> colGroup;
-    @FXML private TreeTableColumn<UsageRow, String> colKwh;
-    @FXML private TreeTableColumn<UsageRow, Void>   colActions;
-    @FXML private VBox             profileContainer;
-    @FXML private Label            formTitle;
-    @FXML private TextField        fieldYear;
-    @FXML private ComboBox<String> fieldMonth;
-    @FXML private TextField        fieldKwh;
+    // ── Row types for the grouped table ──────────────────────────────────────
 
-    private UsageRecord editing = null;
+    sealed interface UsageRow {
+        record YearHeader(int year) implements UsageRow {}
+        record MonthData(MonthSummary summary) implements UsageRow {}
+    }
+
+    // ── State ─────────────────────────────────────────────────────────────────
+
     private Workspace workspace;
-    private final UsageService service = Services.get().usage;
+    private final IntervalService       intervalService = Services.get().intervals;
+    private final IntervalImportService importService   = Services.get().intervalImport;
+
+    private static final DateTimeFormatter IMPORT_DATE_FMT =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd  h:mm a");
+    private static final DateTimeFormatter PEAK_FMT =
+            DateTimeFormatter.ofPattern("MMM d");
+    private static final DateTimeFormatter DISPLAY_DATE_FMT =
+            DateTimeFormatter.ofPattern("MMM d, yyyy");
+
+    // ── Init ──────────────────────────────────────────────────────────────────
 
     @FXML
     public void initialize() {
-        setupTreeTable();
-        setupForm();
+        setupTable();
     }
 
     @Override
     public void setWorkspace(Workspace workspace) {
         this.workspace = workspace;
-        loadRecords();
+        loadData();
     }
 
-    // ── Tree table ────────────────────────────────────────────────────────────
+    // ── Data ──────────────────────────────────────────────────────────────────
 
-    private void setupTreeTable() {
-        colGroup.setCellValueFactory(c -> {
-            TreeItem<UsageRow> item = c.getValue();
-            if (item == null) return new SimpleStringProperty("");
-            UsageRow row = item.getValue();
-            if (row == null) return new SimpleStringProperty("");
-            return row.isYearGroup()
-                    ? new SimpleStringProperty(String.valueOf(row.year()))
-                    : new SimpleStringProperty(MONTH_NAMES.get(row.record().getMonth() - 1));
-        });
-
-        colKwh.setCellValueFactory(c -> {
-            TreeItem<UsageRow> item = c.getValue();
-            if (item == null) return new SimpleStringProperty("");
-            UsageRow row = item.getValue();
-            if (row == null || row.isYearGroup()) return new SimpleStringProperty("");
-            return new SimpleStringProperty(String.format("%,.1f", row.record().getKwhUsed()));
-        });
-
-        colActions.setCellFactory(tc -> new TreeTableCell<>() {
-            private final Button editBtn   = new Button("Edit");
-            private final Button deleteBtn = new Button("Delete");
-            private final HBox   box       = new HBox(6, editBtn, deleteBtn);
-
-            {
-                editBtn.getStyleClass().add("cell-button");
-                deleteBtn.getStyleClass().add("cell-button");
-                box.setAlignment(Pos.CENTER_LEFT);
-                editBtn.setOnAction(e -> {
-                    UsageRow row = rowItem();
-                    if (row != null && !row.isYearGroup()) handleEditRecord(row.record());
-                });
-                deleteBtn.setOnAction(e -> {
-                    UsageRow row = rowItem();
-                    if (row != null && !row.isYearGroup()) handleDeleteRecord(row.record());
-                });
-            }
-
-            @Override
-            protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                UsageRow row = rowItem();
-                setGraphic(!empty && row != null && !row.isYearGroup() ? box : null);
-            }
-
-            private UsageRow rowItem() {
-                TreeTableRow<UsageRow> r = getTreeTableRow();
-                return r == null ? null : r.getItem();
-            }
-        });
-
-        // Year group rows: bold, tinted background
-        usageTable.setRowFactory(tv -> new TreeTableRow<>() {
-            @Override
-            protected void updateItem(UsageRow item, boolean empty) {
-                super.updateItem(item, empty);
-                setStyle(!empty && item != null && item.isYearGroup()
-                        ? "-fx-font-weight: bold; -fx-background-color: #eaf3fb;"
-                        : "");
-            }
-        });
-
-        usageTable.setOnKeyPressed(e -> {
-            TreeItem<UsageRow> sel = usageTable.getSelectionModel().getSelectedItem();
-            if (sel == null || sel.getValue() == null || sel.getValue().isYearGroup()) return;
-            UsageRecord record = sel.getValue().record();
-            if (e.getCode() == KeyCode.F2)     { handleEditRecord(record);   e.consume(); }
-            if (e.getCode() == KeyCode.DELETE)  { handleDeleteRecord(record); e.consume(); }
-        });
-    }
-
-    // ── Form setup ────────────────────────────────────────────────────────────
-
-    private void setupForm() {
-        fieldMonth.getItems().addAll(MONTH_NAMES);
-
-        fieldYear.textProperty().addListener((obs, old, nv) -> {
-            String digits = nv.replaceAll("[^\\d]", "");
-            if (digits.length() > 4) digits = digits.substring(0, 4);
-            if (!digits.equals(nv)) fieldYear.setText(digits);
-        });
-
-        fieldKwh.textProperty().addListener((obs, old, nv) -> {
-            if (!nv.matches("\\d*\\.?\\d*")) fieldKwh.setText(old);
-        });
-
-        fieldKwh.setOnAction(e -> handleSave());
-
-        fieldYear.setText(String.valueOf(LocalDate.now().getYear()));
-    }
-
-    // ── Data loading ──────────────────────────────────────────────────────────
-
-    private void loadRecords() {
+    private void loadData() {
         if (workspace == null) return;
-        List<UsageRecord> all = service.findByWorkspace(workspace.getId());
 
-        TreeItem<UsageRow> root = new TreeItem<>();
-        all.stream()
-                .mapToInt(UsageRecord::getYear)
-                .distinct()
-                .boxed()
-                .sorted(Comparator.reverseOrder())
-                .forEach(year -> {
-                    TreeItem<UsageRow> yearItem = new TreeItem<>(new UsageRow(year, null));
-                    yearItem.setExpanded(true);
-                    all.stream()
-                            .filter(r -> r.getYear() == year)
-                            .sorted(Comparator.comparingInt(UsageRecord::getMonth))
-                            .map(r -> new TreeItem<>(new UsageRow(null, r)))
-                            .forEach(yearItem.getChildren()::add);
-                    root.getChildren().add(yearItem);
-                });
+        long wid = workspace.getId();
+        boolean hasData = intervalService.hasData(wid);
 
-        usageTable.setRoot(root);
-        refreshProfile();
+        setVisible(statusBanner, hasData);
+        setVisible(emptyPane,    !hasData);
+        setVisible(dataPane,     hasData);
+
+        if (!hasData) return;
+
+        // Status banner
+        intervalService.getEsiid(wid)
+                .ifPresent(e -> esiidLabel.setText("ESIID: " + e));
+
+        Optional<LocalDate> from = intervalService.getMinDate(wid);
+        Optional<LocalDate> to   = intervalService.getMaxDate(wid);
+        long count = intervalService.getTotalCount(wid);
+        if (from.isPresent() && to.isPresent()) {
+            coverageLabel.setText(
+                    "Coverage: " + formatDate(from.get()) + " – " + formatDate(to.get())
+                    + "  ·  " + String.format("%,d", count) + " intervals");
+        }
+
+        intervalService.getLastImportTime(wid)
+                .ifPresent(t -> importedLabel.setText(
+                        "Last imported: " + t.format(IMPORT_DATE_FMT)));
+
+        // Chart + table
+        List<MonthSummary> summaries = intervalService.getMonthlySummaries(wid);
+        buildChart(summaries);
+        buildTable(summaries);
     }
 
-    private void refreshProfile() {
-        profileContainer.getChildren().clear();
-        if (workspace == null) return;
-        double[] profile = service.getAveragedProfile(workspace.getId());
-        double mean = Arrays.stream(profile)
-                .filter(v -> !Double.isNaN(v))
-                .average()
-                .orElse(Double.NaN);
-        profileContainer.getChildren().addAll(
-                buildProfileRow(profile, mean, 0, 6),
-                buildProfileRow(profile, mean, 6, 12));
+    // ── Chart ─────────────────────────────────────────────────────────────────
+
+    private void buildChart(List<MonthSummary> summaries) {
+        usageChart.getData().clear();
+        chartXAxis.getCategories().clear();
+
+        // summaries are newest-first; reverse to chronological for the chart
+        List<MonthSummary> chrono = new ArrayList<>(summaries.reversed());
+
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        List<String> labels = new ArrayList<>();
+
+        for (MonthSummary s : chrono) {
+            String label = Month.of(s.month())
+                    .getDisplayName(TextStyle.SHORT, Locale.getDefault())
+                    + " '" + String.valueOf(s.year()).substring(2);
+            labels.add(label);
+            series.getData().add(new XYChart.Data<>(label, s.totalKwh()));
+        }
+
+        chartXAxis.setCategories(FXCollections.observableArrayList(labels));
+        usageChart.getData().add(series);
     }
 
-    private HBox buildProfileRow(double[] profile, double mean, int start, int end) {
-        HBox row = new HBox(6);
-        for (int i = start; i < end; i++) {
-            VBox cell = new VBox(2);
-            cell.setAlignment(Pos.CENTER);
-            cell.setStyle("-fx-min-width: 72; -fx-background-color: #eaf3fb; " +
-                          "-fx-padding: 4 8; -fx-background-radius: 4;");
-            Label monthLbl = new Label(MONTH_ABBR[i]);
-            monthLbl.setStyle("-fx-font-weight: bold; -fx-font-size: 11;");
-            if (Double.isNaN(profile[i])) {
-                cell.getChildren().addAll(monthLbl, new Label("—"));
-            } else {
-                Label kwhLbl = new Label(String.format("%,.1f", profile[i]));
-                cell.getChildren().addAll(monthLbl, kwhLbl);
-                if (!Double.isNaN(mean)) {
-                    double delta = profile[i] - mean;
-                    Label deltaLbl = new Label(String.format("%+,.0f", delta));
-                    deltaLbl.setStyle("-fx-font-size: 10; -fx-text-fill: "
-                            + (delta < 0 ? "#27ae60" : delta > 0 ? "#e74c3c" : "#7f8c8d") + ";");
-                    cell.getChildren().add(deltaLbl);
+    // ── Table ─────────────────────────────────────────────────────────────────
+
+    private void setupTable() {
+        colMonth.setCellValueFactory(c -> {
+            UsageRow row = c.getValue();
+            if (row instanceof UsageRow.YearHeader h) {
+                return new SimpleStringProperty(String.valueOf(h.year()));
+            }
+            MonthSummary s = ((UsageRow.MonthData) row).summary();
+            return new SimpleStringProperty(
+                    Month.of(s.month()).getDisplayName(TextStyle.FULL, Locale.getDefault())
+                    + " " + s.year());
+        });
+
+        colTotalKwh.setCellValueFactory(c -> {
+            if (c.getValue() instanceof UsageRow.YearHeader) return new SimpleStringProperty("");
+            MonthSummary s = ((UsageRow.MonthData) c.getValue()).summary();
+            return new SimpleStringProperty(String.format("%,.1f", s.totalKwh()));
+        });
+
+        colDailyAvg.setCellValueFactory(c -> {
+            if (c.getValue() instanceof UsageRow.YearHeader) return new SimpleStringProperty("");
+            MonthSummary s = ((UsageRow.MonthData) c.getValue()).summary();
+            return new SimpleStringProperty(String.format("%,.1f", s.dailyAvgKwh()));
+        });
+
+        colDays.setCellValueFactory(c -> {
+            if (c.getValue() instanceof UsageRow.YearHeader) return new SimpleStringProperty("");
+            MonthSummary s = ((UsageRow.MonthData) c.getValue()).summary();
+            return new SimpleStringProperty(String.valueOf(s.daysWithData()));
+        });
+
+        colPeak.setCellValueFactory(c -> {
+            if (c.getValue() instanceof UsageRow.YearHeader) return new SimpleStringProperty("");
+            MonthSummary s = ((UsageRow.MonthData) c.getValue()).summary();
+            if (s.peakDate() == null) return new SimpleStringProperty("—");
+            return new SimpleStringProperty(
+                    PEAK_FMT.format(s.peakDate())
+                    + "  —  " + String.format("%,.1f kWh", s.peakKwh()));
+        });
+
+        // Year-header rows get a dark header style; normal rows get default styling
+        monthTable.setRowFactory(tv -> new TableRow<>() {
+            @Override
+            protected void updateItem(UsageRow row, boolean empty) {
+                super.updateItem(row, empty);
+                if (empty || row == null) {
+                    setStyle("");
+                    setPadding(Insets.EMPTY);
+                } else if (row instanceof UsageRow.YearHeader) {
+                    setStyle("-fx-background-color: #2c3e50; -fx-text-fill: white; "
+                            + "-fx-font-weight: bold; -fx-font-size: 12;");
+                    setPadding(new Insets(0, 0, 0, 8));
+                } else {
+                    setStyle("");
+                    setPadding(Insets.EMPTY);
                 }
             }
-            row.getChildren().add(cell);
+        });
+    }
+
+    private void buildTable(List<MonthSummary> summaries) {
+        ObservableList<UsageRow> rows = FXCollections.observableArrayList();
+        int currentYear = -1;
+        for (MonthSummary s : summaries) {  // already sorted year desc, month desc
+            if (s.year() != currentYear) {
+                rows.add(new UsageRow.YearHeader(s.year()));
+                currentYear = s.year();
+            }
+            rows.add(new UsageRow.MonthData(s));
         }
-        return row;
+        monthTable.setItems(rows);
     }
 
     // ── Handlers ─────────────────────────────────────────────────────────────
 
     @FXML
-    private void handleAddEntry() {
-        resetForm();
-        fieldYear.requestFocus();
-        fieldYear.selectAll();
-    }
+    private void handleImport() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Select Smart Meter Texas Interval Data CSV");
+        chooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("CSV files", "*.csv", "*.CSV"));
 
-    @FXML
-    private void handleSave() {
-        String yearText = fieldYear.getText().strip();
-        if (yearText.length() != 4) {
-            showError("Please enter a 4-digit year.");
-            fieldYear.requestFocus();
-            return;
-        }
-        int year = Integer.parseInt(yearText);
+        File file = chooser.showOpenDialog(importBtn.getScene().getWindow());
+        if (file == null) return;
 
-        int monthIndex = fieldMonth.getSelectionModel().getSelectedIndex();
-        if (monthIndex < 0) {
-            showError("Please select a month.");
-            fieldMonth.requestFocus();
-            return;
-        }
-        int month = monthIndex + 1;
+        importBtn.setDisable(true);
+        clearBtn.setDisable(true);
 
-        String kwhText = fieldKwh.getText().strip();
-        if (kwhText.isEmpty()) {
-            showError("Please enter the kWh value.");
-            fieldKwh.requestFocus();
-            return;
-        }
-        double kwh;
-        try {
-            kwh = Double.parseDouble(kwhText);
-        } catch (NumberFormatException ex) {
-            showError("Invalid kWh value.");
-            fieldKwh.requestFocus();
-            return;
-        }
-
-        try {
-            if (editing == null) {
-                service.save(new UsageRecord(workspace.getId(), year, month, kwh));
-                loadRecords();
-                // Auto-advance: move to next month (wrapping Dec → Jan of next year)
-                int nextIndex = monthIndex + 1;
-                if (nextIndex >= 12) {
-                    nextIndex = 0;
-                    fieldYear.setText(String.valueOf(year + 1));
-                }
-                fieldMonth.getSelectionModel().select(nextIndex);
-                fieldKwh.clear();
-                fieldKwh.requestFocus();
-            } else {
-                editing.setYear(year);
-                editing.setMonth(month);
-                editing.setKwhUsed(kwh);
-                service.update(editing);
-                loadRecords();
-                resetForm();
+        Task<ImportResult> task = new Task<>() {
+            @Override
+            protected ImportResult call() throws IOException {
+                return importService.importCsv(workspace.getId(), file);
             }
-        } catch (IllegalArgumentException ex) {
-            showError(ex.getMessage());
-        }
+        };
+
+        task.setOnSucceeded(e -> {
+            importBtn.setDisable(false);
+            clearBtn.setDisable(false);
+            loadData();
+            showImportResult(task.getValue());
+        });
+
+        task.setOnFailed(e -> {
+            importBtn.setDisable(false);
+            clearBtn.setDisable(false);
+            showError("Import failed: " + task.getException().getMessage());
+        });
+
+        Thread thread = new Thread(task, "interval-import");
+        thread.setDaemon(true);
+        thread.start();
     }
 
     @FXML
-    private void handleCancel() {
-        resetForm();
-    }
-
-    private void handleEditRecord(UsageRecord record) {
-        if (record == null) return;
-        editing = record;
-        formTitle.setText("Edit  —  "
-                + Month.of(record.getMonth()).getDisplayName(TextStyle.FULL, Locale.getDefault())
-                + " " + record.getYear());
-        fieldYear.setText(String.valueOf(record.getYear()));
-        fieldMonth.getSelectionModel().select(record.getMonth() - 1);
-        fieldKwh.setText(String.format("%.1f", record.getKwhUsed()));
-        fieldKwh.requestFocus();
-        fieldKwh.selectAll();
-    }
-
-    private void handleDeleteRecord(UsageRecord record) {
-        if (record == null) return;
-        String label = MONTH_NAMES.get(record.getMonth() - 1) + " " + record.getYear();
+    private void handleClear() {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
-                "Delete the " + label + " record (" + String.format("%,.1f", record.getKwhUsed()) + " kWh)?",
+                "Delete all imported interval data for this workspace?\nThis cannot be undone.",
                 ButtonType.YES, ButtonType.CANCEL);
         confirm.setHeaderText(null);
-        confirm.initOwner(usageTable.getScene().getWindow());
+        confirm.initOwner(importBtn.getScene().getWindow());
         if (confirm.showAndWait().filter(b -> b == ButtonType.YES).isPresent()) {
-            service.delete(record.getId());
-            loadRecords();
-            if (editing != null && editing.getId().equals(record.getId())) resetForm();
+            intervalService.deleteByWorkspace(workspace.getId());
+            loadData();
         }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private void resetForm() {
-        editing = null;
-        formTitle.setText("Add Entry");
-        fieldYear.setText(String.valueOf(LocalDate.now().getYear()));
-        fieldMonth.getSelectionModel().clearSelection();
-        fieldKwh.clear();
+    private void showImportResult(ImportResult r) {
+        String body = String.format(
+                "ESIID: %s%nDate range: %s – %s%nNew intervals: %,d  ·  Updated: %,d",
+                r.esiid() != null ? r.esiid() : "—",
+                r.from() != null ? formatDate(r.from()) : "—",
+                r.to()   != null ? formatDate(r.to())   : "—",
+                r.inserted(), r.overwritten());
+
+        Alert info = new Alert(Alert.AlertType.INFORMATION, body, ButtonType.OK);
+        info.setHeaderText("Import complete");
+        info.initOwner(importBtn.getScene().getWindow());
+        info.showAndWait();
     }
 
     private void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR, message, ButtonType.OK);
         alert.setHeaderText(null);
-        alert.initOwner(usageTable.getScene().getWindow());
+        alert.initOwner(importBtn.getScene().getWindow());
         alert.showAndWait();
     }
 
-    // ── Inner type ────────────────────────────────────────────────────────────
+    private static void setVisible(Region node, boolean visible) {
+        node.setVisible(visible);
+        node.setManaged(visible);
+    }
 
-    private record UsageRow(Integer year, UsageRecord record) {
-        boolean isYearGroup() { return record == null; }
+    private static String formatDate(LocalDate d) {
+        return d.format(DISPLAY_DATE_FMT);
     }
 }
