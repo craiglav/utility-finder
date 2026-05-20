@@ -24,6 +24,7 @@ public class MainController {
     @FXML private Button btnUsage;
     @FXML private Button btnPlans;
     @FXML private Button btnCompare;
+    @FXML private Button btnInsights;
 
     private WorkspaceAware activeViewController;
 
@@ -55,6 +56,12 @@ public class MainController {
     private void handleNavCompare() {
         setActiveNav(btnCompare);
         loadView("/com/utilityfinder/ui/view/comparison.fxml");
+    }
+
+    @FXML
+    private void handleNavInsights() {
+        setActiveNav(btnInsights);
+        loadView("/com/utilityfinder/ui/view/insights.fxml");
     }
 
     // ── Workspace management ──────────────────────────────────────────────────
@@ -141,7 +148,7 @@ public class MainController {
     // ── Navigation ────────────────────────────────────────────────────────────
 
     private void setActiveNav(Button active) {
-        for (Button btn : new Button[]{btnUsage, btnPlans, btnCompare}) {
+        for (Button btn : new Button[]{btnUsage, btnPlans, btnCompare, btnInsights}) {
             btn.getStyleClass().remove("nav-button-active");
         }
         active.getStyleClass().add("nav-button-active");

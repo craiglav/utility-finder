@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<StackPane xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.utilityfinder.ui.controller.InsightsController">
+
+    <!-- Empty state -->
+    <VBox fx:id="emptyPane" alignment="CENTER" spacing="12">
+        <Label text="No usage data available."
+               style="-fx-text-fill: #95a5a6; -fx-font-size: 14; -fx-font-weight: bold;"/>
+        <Label text="Import Smart Meter Texas data in the Usage Data tab first."
+               style="-fx-text-fill: #95a5a6;"/>
+    </VBox>
+
+    <!-- Data state -->
+    <VBox fx:id="dataPane" visible="false" managed="false">
+        <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
+                    style="-fx-background: transparent; -fx-background-color: transparent;">
+            <VBox spacing="20" style="-fx-padding: 4 8 24 8;">
+
+                <!-- Filter bar -->
+                <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-padding: 0 0 4 0;">
+                    <Label text="Insights"
+                           style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Label text="Season filter:" style="-fx-text-fill: #7f8c8d;"/>
+                    <ComboBox fx:id="seasonFilter" prefWidth="175"/>
+                </HBox>
+
+                <!-- Section: DOW hourly profiles + DOW average side by side -->
+                <Label text="Hourly Profile by Day of Week" styleClass="section-header"/>
+                <HBox fx:id="dailyPatternPane" spacing="16"/>
+
+                <!-- Section: Peak windows + data quality -->
+                <HBox fx:id="statsRow" spacing="16"/>
+
+                <!-- Section: Seasonal load curves -->
+                <Label text="Seasonal Load Curves" styleClass="section-header"/>
+                <VBox fx:id="seasonalPane"/>
+
+                <!-- Section: Year-over-year -->
+                <Label text="Year-over-Year Comparison" styleClass="section-header"/>
+                <VBox fx:id="yoyPane"/>
+
+                <!-- Section: Rolling average trend -->
+                <Label text="30-Day Usage Trend" styleClass="section-header"/>
+                <VBox fx:id="trendPane"/>
+
+                <!-- Section: Calendar heatmap (all years, global scale) -->
+                <Label text="Usage Calendar" styleClass="section-header"/>
+                <VBox fx:id="heatmapPane"/>
+
+            </VBox>
+        </ScrollPane>
+    </VBox>
+
+</StackPane>

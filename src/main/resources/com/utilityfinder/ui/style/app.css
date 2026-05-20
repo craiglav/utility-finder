@@ -88,6 +88,57 @@
 .chart-overlay .default-color0.chart-series-line { -fx-stroke: #e67e22; }
 .chart-overlay .default-color0.chart-line-symbol { -fx-background-color: #e67e22, white; }
 
+/* ── Global chart text (default text-fill is white in this theme) ── */
+.chart-title        { -fx-text-fill: #2c3e50; -fx-font-size: 13; }
+.axis-label         { -fx-text-fill: #7f8c8d; }
+.axis               { -fx-tick-label-fill: #7f8c8d; }
+.chart-legend-item  { -fx-text-fill: #2c3e50; }
+
+/* ── Insights section headers ────────────────────────────── */
+.section-header {
+    -fx-font-size: 14;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2c3e50;
+    -fx-padding: 6 0 4 0;
+    -fx-border-color: transparent transparent #d5d8dc transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+/* ── Seasonal chart — one explicit color per season ──────── */
+.seasonal-chart .default-color0.chart-series-line   { -fx-stroke: #3498db; -fx-stroke-width: 2; }
+.seasonal-chart .default-color1.chart-series-line   { -fx-stroke: #27ae60; -fx-stroke-width: 2; }
+.seasonal-chart .default-color2.chart-series-line   { -fx-stroke: #e74c3c; -fx-stroke-width: 2; }
+.seasonal-chart .default-color3.chart-series-line   { -fx-stroke: #e67e22; -fx-stroke-width: 2; }
+.seasonal-chart .default-color0.chart-legend-item-symbol { -fx-background-color: #3498db, white; }
+.seasonal-chart .default-color1.chart-legend-item-symbol { -fx-background-color: #27ae60, white; }
+.seasonal-chart .default-color2.chart-legend-item-symbol { -fx-background-color: #e74c3c, white; }
+.seasonal-chart .default-color3.chart-legend-item-symbol { -fx-background-color: #e67e22, white; }
+
+/* ── DOW hourly chart — Mon through Sun ─────────────────── */
+.dow-chart .default-color0.chart-series-line { -fx-stroke: #3498db; -fx-stroke-width: 1.5; }
+.dow-chart .default-color1.chart-series-line { -fx-stroke: #9b59b6; -fx-stroke-width: 1.5; }
+.dow-chart .default-color2.chart-series-line { -fx-stroke: #27ae60; -fx-stroke-width: 1.5; }
+.dow-chart .default-color3.chart-series-line { -fx-stroke: #f39c12; -fx-stroke-width: 1.5; }
+.dow-chart .default-color4.chart-series-line { -fx-stroke: #e74c3c; -fx-stroke-width: 1.5; }
+.dow-chart .default-color5.chart-series-line { -fx-stroke: #1abc9c; -fx-stroke-width: 2; }
+.dow-chart .default-color6.chart-series-line { -fx-stroke: #e67e22; -fx-stroke-width: 2; }
+.dow-chart .default-color0.chart-legend-item-symbol { -fx-background-color: #3498db, white; }
+.dow-chart .default-color1.chart-legend-item-symbol { -fx-background-color: #9b59b6, white; }
+.dow-chart .default-color2.chart-legend-item-symbol { -fx-background-color: #27ae60, white; }
+.dow-chart .default-color3.chart-legend-item-symbol { -fx-background-color: #f39c12, white; }
+.dow-chart .default-color4.chart-legend-item-symbol { -fx-background-color: #e74c3c, white; }
+.dow-chart .default-color5.chart-legend-item-symbol { -fx-background-color: #1abc9c, white; }
+.dow-chart .default-color6.chart-legend-item-symbol { -fx-background-color: #e67e22, white; }
+
+/* ── YoY line chart symbols ──────────────────────────────── */
+.yoy-chart .chart-line-symbol { -fx-background-radius: 4; -fx-padding: 4; }
+
+/* ── Trend chart — faint daily line, bold rolling average ── */
+.trend-chart .default-color0.chart-series-line { -fx-stroke: #bdc3c7; -fx-stroke-width: 1; }
+.trend-chart .default-color1.chart-series-line { -fx-stroke: #2980b9; -fx-stroke-width: 2.5; }
+.trend-chart .default-color0.chart-legend-item-symbol { -fx-background-color: #bdc3c7, white; }
+.trend-chart .default-color1.chart-legend-item-symbol { -fx-background-color: #2980b9, white; }
+
 /* ── Workspace manager list cell buttons ─────────────────── */
 .cell-button {
     -fx-background-color: transparent;

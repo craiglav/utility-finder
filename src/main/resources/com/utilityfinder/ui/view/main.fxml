@@ -18,11 +18,13 @@
 
     <left>
         <VBox styleClass="sidebar" prefWidth="160.0">
-            <Button fx:id="btnUsage"   text="Usage Data"  onAction="#handleNavUsage"
+            <Button fx:id="btnUsage"    text="Usage Data"  onAction="#handleNavUsage"
                     maxWidth="Infinity" styleClass="nav-button"/>
-            <Button fx:id="btnPlans"   text="Rate Plans"  onAction="#handleNavPlans"
+            <Button fx:id="btnPlans"    text="Rate Plans"  onAction="#handleNavPlans"
                     maxWidth="Infinity" styleClass="nav-button"/>
-            <Button fx:id="btnCompare" text="Compare"     onAction="#handleNavCompare"
+            <Button fx:id="btnCompare"  text="Compare"     onAction="#handleNavCompare"
+                    maxWidth="Infinity" styleClass="nav-button"/>
+            <Button fx:id="btnInsights" text="Insights"    onAction="#handleNavInsights"
                     maxWidth="Infinity" styleClass="nav-button"/>
         </VBox>
     </left>
