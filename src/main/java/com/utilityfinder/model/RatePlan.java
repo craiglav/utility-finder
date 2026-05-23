@@ -19,7 +19,8 @@ public class RatePlan {
     private Double terminationFeeFlat;
     private Double terminationFeePerMonth;
     private LocalDate contractEndDate;
-    private List<TierDiscount> discounts = new ArrayList<>();
+    private List<TierDiscount> discounts   = new ArrayList<>();
+    private List<TouWindow>    touWindows  = new ArrayList<>();
 
     public RatePlan() {}
 
@@ -62,6 +63,10 @@ public class RatePlan {
     public LocalDate getContractEndDate()                            { return contractEndDate; }
     public void setContractEndDate(LocalDate contractEndDate)       { this.contractEndDate = contractEndDate; }
 
-    public List<TierDiscount> getDiscounts()              { return discounts; }
+    public List<TierDiscount> getDiscounts()               { return discounts; }
     public void setDiscounts(List<TierDiscount> discounts) { this.discounts = discounts; }
+
+    public List<TouWindow> getTouWindows()                { return touWindows; }
+    public void setTouWindows(List<TouWindow> windows)   { this.touWindows = windows; }
+    public boolean hasTouWindows()                        { return !touWindows.isEmpty(); }
 }

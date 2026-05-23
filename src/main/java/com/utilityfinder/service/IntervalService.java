@@ -21,6 +21,11 @@ public class IntervalService {
         return repo.getAveragedMonthlyProfile(workspaceId);
     }
 
+    /** 12×24 hourly profile [month][hour]. Null rows = months with no data. */
+    public double[][] getHourlyProfileByMonth(long workspaceId) {
+        return repo.getHourlyProfileByMonth(workspaceId);
+    }
+
     public boolean hasData(long workspaceId) {
         return repo.hasData(workspaceId);
     }

@@ -175,6 +175,52 @@ public class IntervalRepository {
         return profile;
     }
 
+    /**
+     * Returns a 12-element array (index 0 = Jan … 11 = Dec) where each element
+     * is a 24-element array (index = hour 0–23) of average monthly kWh for that
+     * hour. Months with no data have a null row.
+     *
+     * The inner query aggregates to (year, month, hour) totals; the outer query
+     * averages across years so the result represents a typical month.
+     */
+    public double[][] getHourlyProfileByMonth(long workspaceId) {
+        String sql = """
+                SELECT mo, hr, AVG(month_hr_kwh) AS avg_kwh
+                FROM (
+                    SELECT YEAR(reading_date)  AS yr,
+                           MONTH(reading_date) AS mo,
+                           (start_minute / 60) AS hr,
+                           SUM(kwh)            AS month_hr_kwh
+                    FROM interval_record
+                    WHERE workspace_id = ?
+                    GROUP BY YEAR(reading_date), MONTH(reading_date), (start_minute / 60)
+                ) sub
+                GROUP BY mo, hr
+                ORDER BY mo, hr
+                """;
+
+        double[][] result = new double[12][];
+        boolean[]  hasMo  = new boolean[12];
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, workspaceId);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                int mo = rs.getInt("mo") - 1; // 0-based
+                int hr = rs.getInt("hr");
+                if (result[mo] == null) {
+                    result[mo] = new double[24];
+                    hasMo[mo]  = true;
+                }
+                result[mo][hr] = rs.getDouble("avg_kwh");
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to compute hourly profile by month", e);
+        }
+        return result;
+    }
+
     public List<Integer> getDistinctYears(long workspaceId) {
         String sql = """
                 SELECT DISTINCT YEAR(reading_date) AS yr

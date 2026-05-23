@@ -2,6 +2,7 @@ package com.utilityfinder.repository;
 
 import com.utilityfinder.model.RatePlan;
 import com.utilityfinder.model.TierDiscount;
+import com.utilityfinder.model.TouWindow;
 
 import java.sql.*;
 import java.time.LocalDate;
@@ -21,6 +22,10 @@ public class RatePlanRepository {
             "SELECT td.id, td.rate_plan_id, td.threshold_kwh, td.discount_amt, td.sort_order " +
             "FROM tier_discount td JOIN rate_plan rp ON td.rate_plan_id = rp.id " +
             "WHERE rp.workspace_id = ? ORDER BY td.rate_plan_id, td.sort_order";
+        String touSql =
+            "SELECT tw.id, tw.rate_plan_id, tw.start_hour, tw.end_hour, tw.rate_per_kwh, tw.sort_order " +
+            "FROM tou_window tw JOIN rate_plan rp ON tw.rate_plan_id = rp.id " +
+            "WHERE rp.workspace_id = ? ORDER BY tw.rate_plan_id, tw.sort_order";
 
         List<RatePlan> plans = new ArrayList<>();
         Map<Long, RatePlan> byId = new LinkedHashMap<>();
@@ -45,6 +50,15 @@ public class RatePlanRepository {
                     }
                 }
             }
+            try (PreparedStatement ps = conn.prepareStatement(touSql)) {
+                ps.setLong(1, workspaceId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        RatePlan p = byId.get(rs.getLong("rate_plan_id"));
+                        if (p != null) p.getTouWindows().add(mapTouWindow(rs));
+                    }
+                }
+            }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -60,6 +74,9 @@ public class RatePlanRepository {
         String discSql =
             "SELECT id, rate_plan_id, threshold_kwh, discount_amt, sort_order " +
             "FROM tier_discount WHERE rate_plan_id = ? ORDER BY sort_order";
+        String touSql =
+            "SELECT id, rate_plan_id, start_hour, end_hour, rate_per_kwh, sort_order " +
+            "FROM tou_window WHERE rate_plan_id = ? ORDER BY sort_order";
 
         try (Connection conn = Database.getConnection()) {
             RatePlan plan;
@@ -74,6 +91,12 @@ public class RatePlanRepository {
                 ps.setLong(1, id);
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) plan.getDiscounts().add(mapDiscount(rs));
+                }
+            }
+            try (PreparedStatement ps = conn.prepareStatement(touSql)) {
+                ps.setLong(1, id);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) plan.getTouWindows().add(mapTouWindow(rs));
                 }
             }
             return Optional.of(plan);
@@ -98,6 +121,7 @@ public class RatePlanRepository {
                 if (keys.next()) plan.setId(keys.getLong(1));
             }
             insertDiscounts(conn, plan);
+            insertTouWindows(conn, plan);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -131,6 +155,8 @@ public class RatePlanRepository {
                 }
                 deleteDiscounts(conn, plan.getId());
                 insertDiscounts(conn, plan);
+                deleteTouWindows(conn, plan.getId());
+                insertTouWindows(conn, plan);
                 conn.commit();
             } catch (SQLException e) {
                 conn.rollback();
@@ -314,5 +340,42 @@ public class RatePlanRepository {
         d.setDiscountAmt(rs.getDouble("discount_amt"));
         d.setSortOrder(rs.getInt("sort_order"));
         return d;
+    }
+
+    private void insertTouWindows(Connection conn, RatePlan plan) throws SQLException {
+        if (plan.getTouWindows().isEmpty()) return;
+        String sql = "INSERT INTO tou_window (rate_plan_id, start_hour, end_hour, rate_per_kwh, sort_order) " +
+                     "VALUES (?, ?, ?, ?, ?)";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            for (int i = 0; i < plan.getTouWindows().size(); i++) {
+                TouWindow w = plan.getTouWindows().get(i);
+                ps.setLong(1, plan.getId());
+                ps.setInt(2, w.getStartHour());
+                ps.setInt(3, w.getEndHour());
+                ps.setDouble(4, w.getRatePerKwh());
+                ps.setInt(5, i);
+                ps.addBatch();
+            }
+            ps.executeBatch();
+        }
+    }
+
+    private void deleteTouWindows(Connection conn, long planId) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "DELETE FROM tou_window WHERE rate_plan_id = ?")) {
+            ps.setLong(1, planId);
+            ps.executeUpdate();
+        }
+    }
+
+    private TouWindow mapTouWindow(ResultSet rs) throws SQLException {
+        TouWindow w = new TouWindow();
+        w.setId(rs.getLong("id"));
+        w.setRatePlanId(rs.getLong("rate_plan_id"));
+        w.setStartHour(rs.getInt("start_hour"));
+        w.setEndHour(rs.getInt("end_hour"));
+        w.setRatePerKwh(rs.getDouble("rate_per_kwh"));
+        w.setSortOrder(rs.getInt("sort_order"));
+        return w;
     }
 }

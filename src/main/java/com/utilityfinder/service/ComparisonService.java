@@ -4,6 +4,7 @@ import com.utilityfinder.model.MonthlyEstimate;
 import com.utilityfinder.model.PlanSummary;
 import com.utilityfinder.model.RatePlan;
 import com.utilityfinder.model.TierDiscount;
+import com.utilityfinder.model.TouWindow;
 
 import java.time.Month;
 import java.time.YearMonth;
@@ -26,8 +27,16 @@ public class ComparisonService {
 
     public List<PlanSummary> compare(long workspaceId) {
         double[] rawProfile = intervalService.getAveragedProfile(workspaceId);
-        double[] profile = substituteGlobalAverage(rawProfile);
+        double[] profile    = substituteGlobalAverage(rawProfile);
         List<RatePlan> plans = ratePlanService.findByWorkspace(workspaceId);
+
+        // Only fetch hourly data when at least one plan needs it
+        double[][] rawHourly = null;
+        double[][] hourly    = null;
+        if (plans.stream().anyMatch(RatePlan::hasTouWindows)) {
+            rawHourly = intervalService.getHourlyProfileByMonth(workspaceId);
+            hourly    = substituteHourlyAverage(rawHourly);
+        }
 
         long remainingMonths = plans.stream()
                 .filter(RatePlan::isCurrent)
@@ -38,29 +47,34 @@ public class ComparisonService {
                         : 0L)
                 .orElse(0L);
 
+        final double[][] fRawHourly = rawHourly;
+        final double[][] fHourly    = hourly;
+
         return plans.stream()
-                .map(plan -> calculate(plan, rawProfile, profile, remainingMonths))
+                .map(plan -> calculate(plan, rawProfile, profile, fRawHourly, fHourly, remainingMonths))
                 .toList();
     }
 
-    private PlanSummary calculate(RatePlan plan, double[] rawProfile, double[] profile, long remainingMonths) {
+    // ── Per-plan calculation ──────────────────────────────────────────────────
+
+    private PlanSummary calculate(RatePlan plan,
+                                  double[] rawProfile, double[] profile,
+                                  double[][] rawHourly, double[][] hourly,
+                                  long remainingMonths) {
         List<MonthlyEstimate> estimates = new ArrayList<>();
         List<String> estimatedNames = new ArrayList<>();
 
         for (int i = 0; i < 12; i++) {
-            boolean estimated = Double.isNaN(rawProfile[i]);
-            double kwh = profile[i];
-            double energy = kwh * plan.getRatePerKwh();
-            double discounts = plan.getDiscounts().stream()
-                    .filter(d -> kwh >= d.getThresholdKwh())
-                    .mapToDouble(TierDiscount::getDiscountAmt)
-                    .sum();
-            double total = plan.getBaseCharge() + energy - discounts;
-
-            estimates.add(new MonthlyEstimate(i + 1, kwh, estimated,
-                    plan.getBaseCharge(), energy, discounts, total));
-
-            if (estimated) {
+            MonthlyEstimate est;
+            if (plan.hasTouWindows() && hourly != null) {
+                boolean estimated = rawHourly[i] == null;
+                est = calculateTouMonth(plan, hourly[i], i, estimated);
+            } else {
+                boolean estimated = Double.isNaN(rawProfile[i]);
+                est = calculateFlatMonth(plan, profile[i], i, estimated);
+            }
+            estimates.add(est);
+            if (est.estimated()) {
                 estimatedNames.add(Month.of(i + 1)
                         .getDisplayName(TextStyle.FULL, Locale.getDefault()));
             }
@@ -71,7 +85,7 @@ public class ComparisonService {
                 .max((a, b) -> Double.compare(a.totalCost(), b.totalCost())).orElseThrow();
         MonthlyEstimate lowest = estimates.stream()
                 .min((a, b) -> Double.compare(a.totalCost(), b.totalCost())).orElseThrow();
-        double totalKwh = Arrays.stream(profile).sum();
+        double totalKwh = estimates.stream().mapToDouble(MonthlyEstimate::avgKwh).sum();
         double effectiveRate = totalKwh > 0 ? annual / totalKwh : 0;
 
         double terminationFee = 0;
@@ -97,7 +111,51 @@ public class ComparisonService {
                 effectiveRate, estimates, estimatedNames);
     }
 
-    /** Replaces NaN entries (months with no data) with the mean of all valid months. */
+    // ── Month calculation helpers ─────────────────────────────────────────────
+
+    private MonthlyEstimate calculateFlatMonth(RatePlan plan, double kwh, int monthIdx, boolean estimated) {
+        double energy    = kwh * plan.getRatePerKwh();
+        double discounts = applicableDiscounts(plan, kwh);
+        double total     = plan.getBaseCharge() + energy - discounts;
+        return new MonthlyEstimate(monthIdx + 1, kwh, estimated,
+                plan.getBaseCharge(), energy, discounts, total);
+    }
+
+    private MonthlyEstimate calculateTouMonth(RatePlan plan, double[] hourlyAvg,
+                                              int monthIdx, boolean estimated) {
+        double totalKwh  = 0;
+        double energy    = 0;
+        for (int h = 0; h < 24; h++) {
+            double kwh = hourlyAvg[h];
+            totalKwh += kwh;
+            energy   += kwh * rateForHour(plan, h);
+        }
+        double discounts = applicableDiscounts(plan, totalKwh);
+        double total     = plan.getBaseCharge() + energy - discounts;
+        return new MonthlyEstimate(monthIdx + 1, totalKwh, estimated,
+                plan.getBaseCharge(), energy, discounts, total);
+    }
+
+    // ── TOU helpers ───────────────────────────────────────────────────────────
+
+    /** Returns the $/kWh rate for the given hour: first matching TOU window, or the base rate. */
+    private double rateForHour(RatePlan plan, int hour) {
+        for (TouWindow w : plan.getTouWindows()) {
+            if (w.containsHour(hour)) return w.getRatePerKwh();
+        }
+        return plan.getRatePerKwh();
+    }
+
+    private double applicableDiscounts(RatePlan plan, double kwh) {
+        return plan.getDiscounts().stream()
+                .filter(d -> kwh >= d.getThresholdKwh())
+                .mapToDouble(TierDiscount::getDiscountAmt)
+                .sum();
+    }
+
+    // ── Profile substitution ──────────────────────────────────────────────────
+
+    /** Replaces NaN entries with the mean of all valid months. */
     private double[] substituteGlobalAverage(double[] raw) {
         double[] result = Arrays.copyOf(raw, raw.length);
         double globalAvg = Arrays.stream(raw)
@@ -106,6 +164,30 @@ public class ComparisonService {
                 .orElse(0.0);
         for (int i = 0; i < result.length; i++) {
             if (Double.isNaN(result[i])) result[i] = globalAvg;
+        }
+        return result;
+    }
+
+    /**
+     * For hourly profiles, fills null month rows with the average hourly profile
+     * computed across all months that do have data.
+     */
+    private double[][] substituteHourlyAverage(double[][] raw) {
+        double[] globalHourly = new double[24];
+        int count = 0;
+        for (double[] month : raw) {
+            if (month != null) {
+                for (int h = 0; h < 24; h++) globalHourly[h] += month[h];
+                count++;
+            }
+        }
+        if (count > 0) {
+            for (int h = 0; h < 24; h++) globalHourly[h] /= count;
+        }
+
+        double[][] result = new double[12][];
+        for (int m = 0; m < 12; m++) {
+            result[m] = raw[m] != null ? raw[m] : globalHourly;
         }
         return result;
     }

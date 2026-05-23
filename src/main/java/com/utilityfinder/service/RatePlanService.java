@@ -2,6 +2,7 @@ package com.utilityfinder.service;
 
 import com.utilityfinder.model.RatePlan;
 import com.utilityfinder.model.TierDiscount;
+import com.utilityfinder.model.TouWindow;
 import com.utilityfinder.repository.RatePlanRepository;
 
 import java.util.List;
@@ -57,6 +58,15 @@ public class RatePlanService {
                 throw new IllegalArgumentException("Discount threshold must be greater than zero.");
             if (d.getDiscountAmt() <= 0)
                 throw new IllegalArgumentException("Discount amount must be greater than zero.");
+        }
+
+        for (TouWindow w : plan.getTouWindows()) {
+            if (w.getStartHour() == w.getEndHour())
+                throw new IllegalArgumentException(
+                        "TOU window start and end hours cannot be the same.");
+            if (w.getRatePerKwh() < 0)
+                throw new IllegalArgumentException(
+                        "TOU window rate cannot be negative.");
         }
     }
 }

@@ -86,6 +86,17 @@ public class Database {
         )
         """,
         """
+        CREATE TABLE IF NOT EXISTS tou_window (
+            id           BIGINT   AUTO_INCREMENT PRIMARY KEY,
+            rate_plan_id BIGINT   NOT NULL,
+            start_hour   TINYINT  NOT NULL CHECK (start_hour BETWEEN 0 AND 23),
+            end_hour     TINYINT  NOT NULL CHECK (end_hour BETWEEN 0 AND 23),
+            rate_per_kwh DOUBLE   NOT NULL,
+            sort_order   INT      NOT NULL DEFAULT 0,
+            FOREIGN KEY (rate_plan_id) REFERENCES rate_plan(id) ON DELETE CASCADE
+        )
+        """,
+        """
         CREATE TABLE IF NOT EXISTS interval_record (
             id           BIGINT    AUTO_INCREMENT PRIMARY KEY,
             workspace_id BIGINT    NOT NULL,

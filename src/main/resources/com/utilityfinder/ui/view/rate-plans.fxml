@@ -87,6 +87,19 @@
                                 mnemonicParsing="false"/>
                     </VBox>
 
+                    <!-- Time-of-Use Windows -->
+                    <VBox spacing="6">
+                        <HBox spacing="8" alignment="CENTER_LEFT">
+                            <Label text="Time-of-Use Windows"
+                                   style="-fx-font-weight: bold; -fx-font-size: 12;"/>
+                            <Label text="override the base rate for specific hours  •  0 = free"
+                                   style="-fx-text-fill: #95a5a6; -fx-font-size: 11;"/>
+                        </HBox>
+                        <VBox fx:id="touWindowRows" spacing="6"/>
+                        <Button text="+ Add TOU Window" onAction="#handleAddTouWindow"
+                                mnemonicParsing="false"/>
+                    </VBox>
+
                     <!-- Early Termination Fees -->
                     <VBox spacing="6">
                         <HBox spacing="8" alignment="CENTER_LEFT">
