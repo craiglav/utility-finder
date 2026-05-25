@@ -22,6 +22,8 @@
                     maxWidth="Infinity" styleClass="nav-button"/>
             <Button fx:id="btnPlans"    text="Rate Plans"  onAction="#handleNavPlans"
                     maxWidth="Infinity" styleClass="nav-button"/>
+            <Button fx:id="btnDelivery" text="Delivery"    onAction="#handleNavDelivery"
+                    maxWidth="Infinity" styleClass="nav-button"/>
             <Button fx:id="btnCompare"  text="Compare"     onAction="#handleNavCompare"
                     maxWidth="Infinity" styleClass="nav-button"/>
             <Button fx:id="btnInsights" text="Insights"    onAction="#handleNavInsights"

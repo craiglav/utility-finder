@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.utilityfinder.ui.controller.TdspViewController"
+      spacing="0" style="-fx-padding: 0;">
+
+    <!-- ── Carrier + rate section ────────────────────────────────────────── -->
+    <VBox spacing="12" style="-fx-padding: 16 20 12 20;">
+
+        <Label text="Delivery Carrier"
+               style="-fx-font-size: 16; -fx-font-weight: bold;"/>
+
+        <!-- Carrier selector row -->
+        <HBox spacing="8" alignment="CENTER_LEFT">
+            <Label text="Carrier" minWidth="60"
+                   style="-fx-text-fill: #7f8c8d;"/>
+            <ComboBox fx:id="tdspCombo" prefWidth="230"
+                      onAction="#handleTdspSelected"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label text="ZIP" style="-fx-text-fill: #7f8c8d;"/>
+            <TextField fx:id="zipField" prefColumnCount="7"
+                       promptText="e.g. 77001"/>
+            <Button text="Look Up" onAction="#handleZipLookup"
+                    mnemonicParsing="false"/>
+        </HBox>
+
+        <!-- Auto-detect / ZIP match indicator -->
+        <Label fx:id="detectionLabel"
+               style="-fx-text-fill: #27ae60; -fx-font-size: 11;"
+               visible="false" managed="false"/>
+
+        <!-- Rate display box -->
+        <VBox fx:id="ratesBox" spacing="6" visible="false" managed="false"
+              style="-fx-border-color: #d5d8dc; -fx-border-radius: 4;
+                     -fx-background-color: #f8f9fa; -fx-background-radius: 4;
+                     -fx-padding: 10 12;">
+            <HBox spacing="8">
+                <Label text="Base charge" minWidth="130"
+                       style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;"/>
+                <Label fx:id="baseChargeLabel" style="-fx-font-weight: bold;"/>
+            </HBox>
+            <HBox spacing="8">
+                <Label text="Distribution" minWidth="130"
+                       style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;"/>
+                <Label fx:id="perKwhLabel" style="-fx-font-weight: bold;"/>
+            </HBox>
+            <HBox spacing="8" alignment="CENTER_LEFT">
+                <Label fx:id="lastVerifiedLabel"
+                       style="-fx-text-fill: #95a5a6; -fx-font-size: 10;"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button text="Edit Rates" onAction="#handleEditRates"
+                        style="-fx-font-size: 10;" mnemonicParsing="false"/>
+            </HBox>
+        </VBox>
+
+        <!-- Check for Updates row -->
+        <HBox alignment="CENTER_RIGHT" spacing="8">
+            <Label fx:id="fetchStatusLabel"
+                   style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;"
+                   visible="false" managed="false"/>
+            <Button fx:id="btnCheckUpdates" text="Check for Updates"
+                    onAction="#handleCheckForUpdates" mnemonicParsing="false"/>
+        </HBox>
+
+    </VBox>
+
+    <Separator/>
+
+    <!-- ── Monthly breakdown section ─────────────────────────────────────── -->
+    <VBox spacing="8" VBox.vgrow="ALWAYS" style="-fx-padding: 12 20 12 20;">
+
+        <Label fx:id="tableSubtitle" text="Monthly Delivery Costs"
+               style="-fx-font-size: 13; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+
+        <!-- No-data placeholders -->
+        <Label fx:id="noCarrierLabel" wrapText="true"
+               text="Select a delivery carrier above to see your monthly cost breakdown."
+               style="-fx-text-fill: #7f8c8d; -fx-font-size: 12; -fx-padding: 8 0;"
+               visible="false" managed="false"/>
+
+        <Label fx:id="noUsageLabel" wrapText="true"
+               text="Import usage data in the Usage Data view to see your monthly delivery cost breakdown."
+               style="-fx-text-fill: #7f8c8d; -fx-font-size: 12; -fx-padding: 8 0;"
+               visible="false" managed="false"/>
+
+        <!-- Monthly table -->
+        <TableView fx:id="monthTable" VBox.vgrow="ALWAYS"
+                   visible="false" managed="false">
+            <columns>
+                <TableColumn fx:id="colMonth"        text="Month"        prefWidth="150" sortable="false"/>
+                <TableColumn fx:id="colKwh"          text="Avg kWh"      prefWidth="110" sortable="false"
+                             style="-fx-alignment: CENTER_RIGHT;"/>
+                <TableColumn fx:id="colBase"         text="Base"         prefWidth="100" sortable="false"
+                             style="-fx-alignment: CENTER_RIGHT;"/>
+                <TableColumn fx:id="colDistribution" text="Distribution" prefWidth="120" sortable="false"
+                             style="-fx-alignment: CENTER_RIGHT;"/>
+                <TableColumn fx:id="colTotal"        text="Total"        prefWidth="110" sortable="false"
+                             style="-fx-alignment: CENTER_RIGHT;"/>
+            </columns>
+        </TableView>
+
+        <!-- Annual total -->
+        <HBox fx:id="annualRow" alignment="CENTER_RIGHT" spacing="16"
+              visible="false" managed="false"
+              style="-fx-border-color: #d5d8dc; -fx-border-width: 1 0 0 0; -fx-padding: 8 4 0 0;">
+            <Label text="Annual Total"
+                   style="-fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+            <Label fx:id="annualTotalLabel"
+                   style="-fx-font-weight: bold; -fx-font-size: 14; -fx-text-fill: #2c3e50;"/>
+        </HBox>
+
+    </VBox>
+
+    <Separator/>
+
+    <!-- ── Rate change schedule ───────────────────────────────────────────── -->
+    <VBox spacing="6" style="-fx-padding: 12 20 16 20;">
+        <Label text="About TDSP Rate Changes"
+               style="-fx-font-size: 12; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+        <Label wrapText="true"
+               text="TDSP delivery rates are filed with the Public Utility Commission of Texas (PUCT) and typically update on March 1 and September 1 each year following rate case proceedings. Rates shown reflect the most recently published tariff. Use &quot;Check for Updates&quot; to pull the latest rates directly from the PUCT rate report."
+               style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;"/>
+    </VBox>
+
+</VBox>

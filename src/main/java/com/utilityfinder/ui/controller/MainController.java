@@ -7,7 +7,9 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -23,6 +25,7 @@ public class MainController {
     @FXML private StackPane contentArea;
     @FXML private Button btnUsage;
     @FXML private Button btnPlans;
+    @FXML private Button btnDelivery;
     @FXML private Button btnCompare;
     @FXML private Button btnInsights;
 
@@ -50,6 +53,12 @@ public class MainController {
     private void handleNavPlans() {
         setActiveNav(btnPlans);
         loadView("/com/utilityfinder/ui/view/rate-plans.fxml");
+    }
+
+    @FXML
+    private void handleNavDelivery() {
+        setActiveNav(btnDelivery);
+        loadView("/com/utilityfinder/ui/view/tdsp.fxml");
     }
 
     @FXML
@@ -140,15 +149,19 @@ public class MainController {
             }
 
             contentArea.getChildren().setAll(view);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Alert alert = new Alert(Alert.AlertType.ERROR,
+                    "Failed to load view:\n" + e.getMessage(), ButtonType.OK);
+            alert.setHeaderText(null);
+            alert.showAndWait();
         }
     }
 
     // ── Navigation ────────────────────────────────────────────────────────────
 
     private void setActiveNav(Button active) {
-        for (Button btn : new Button[]{btnUsage, btnPlans, btnCompare, btnInsights}) {
+        for (Button btn : new Button[]{btnUsage, btnPlans, btnDelivery, btnCompare, btnInsights}) {
             btn.getStyleClass().remove("nav-button-active");
         }
         active.getStyleClass().add("nav-button-active");
