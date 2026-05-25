@@ -34,6 +34,22 @@ The app appears in your application launcher. To run from the terminal:
 /opt/utilityfinder/bin/Utility\ Finder
 ```
 
+## Releasing
+
+1. Update the version in `pom.xml`:
+   ```xml
+   <version>1.1.0</version>
+   ```
+2. Commit, tag, and push:
+   ```bash
+   git add pom.xml
+   git commit -m "Bump version to 1.1.0"
+   git tag v1.1.0
+   git push origin main --tags
+   ```
+
+Pushing the tag triggers the [Build Native Installers](.github/workflows/build-installers.yml) workflow, which produces `.dmg`, `.msi`, and `.deb` artifacts automatically. Download them from the Actions run summary.
+
 ## Building from source
 
 Requires JDK 21 and Maven.
