@@ -1,0 +1,111 @@
+name: Build Native Installers
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'App version (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+jobs:
+  build-installer:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            pkg-type: dmg
+          - os: windows-latest
+            pkg-type: msi
+          - os: ubuntu-latest
+            pkg-type: deb
+
+    runs-on: ${{ matrix.os }}
+    name: Build ${{ matrix.pkg-type }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Liberica JDK Full includes the JavaFX JMODs needed for jlink
+      - name: Set up Liberica JDK Full 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: liberica
+          java-version: 21
+          java-package: jdk+fx
+          cache: maven
+
+      - name: Resolve version
+        id: vars
+        shell: bash
+        run: |
+          JAR_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            APP_VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            APP_VERSION="${{ inputs.version }}"
+          fi
+          echo "jar_version=$JAR_VERSION" >> $GITHUB_OUTPUT
+          echo "app_version=$APP_VERSION" >> $GITHUB_OUTPUT
+
+      # jpackage profile: skips shade, copies non-JavaFX deps to target/lib/
+      - name: Build thin JAR and copy deps
+        run: mvn package -Pjpackage --no-transfer-progress
+
+      # App JAR must live alongside its deps for jpackage --input
+      - name: Stage app JAR into lib directory
+        shell: bash
+        run: cp target/utility-finder-${{ steps.vars.outputs.jar_version }}.jar target/lib/
+
+      # WiX is required by jpackage to build MSI on Windows
+      - name: Install WiX Toolset (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: choco install wixtoolset --version=3.14.1 -y
+
+      # Create a trimmed JRE that includes JavaFX modules and their native libraries
+      - name: Create jlink runtime image
+        shell: bash
+        run: |
+          jlink \
+            --add-modules javafx.controls,javafx.fxml,java.sql,java.naming,java.desktop,java.xml,java.logging,jdk.unsupported,java.management,jdk.crypto.ec,java.prefs,jdk.zipfs \
+            --output target/runtime \
+            --strip-debug \
+            --compress=2 \
+            --no-header-files \
+            --no-man-pages
+
+      - name: Run jpackage
+        shell: bash
+        run: |
+          EXTRA_ARGS=""
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            EXTRA_ARGS="--win-dir-chooser --win-menu --win-shortcut"
+          elif [[ "${{ runner.os }}" == "Linux" ]]; then
+            EXTRA_ARGS="--linux-shortcut"
+          fi
+
+          jpackage \
+            --input target/lib \
+            --main-jar utility-finder-${{ steps.vars.outputs.jar_version }}.jar \
+            --main-class com.utilityfinder.app.Launcher \
+            --runtime-image target/runtime \
+            --name "Utility Finder" \
+            --app-version ${{ steps.vars.outputs.app_version }} \
+            --java-options "--add-modules=javafx.controls,javafx.fxml" \
+            --type ${{ matrix.pkg-type }} \
+            --dest target/dist \
+            --description "Texas Electric Rate Comparison Tool" \
+            --vendor "Craig Lavender" \
+            $EXTRA_ARGS
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: utility-finder-${{ matrix.pkg-type }}-${{ steps.vars.outputs.app_version }}
+          path: target/dist/
+          if-no-files-found: error
