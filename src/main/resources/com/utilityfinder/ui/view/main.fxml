@@ -36,4 +36,12 @@
         </StackPane>
     </center>
 
+    <bottom>
+        <Label text="For use in Texas deregulated energy markets (ERCOT) only"
+               style="-fx-font-size: 10; -fx-text-fill: #95a5a6;
+                      -fx-padding: 4 12; -fx-border-color: #e0e0e0;
+                      -fx-border-width: 1 0 0 0; -fx-background-color: #fafafa;
+                      -fx-max-width: Infinity;"/>
+    </bottom>
+
 </BorderPane>

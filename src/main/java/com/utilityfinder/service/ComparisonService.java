@@ -6,6 +6,7 @@ import com.utilityfinder.model.RatePlan;
 import com.utilityfinder.model.TierDiscount;
 import com.utilityfinder.model.TouWindow;
 
+import java.time.LocalDate;
 import java.time.Month;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
@@ -89,13 +90,18 @@ public class ComparisonService {
         double effectiveRate = totalKwh > 0 ? annual / totalKwh : 0;
 
         double terminationFee = 0;
-        if (plan.isCurrent()) {
-            long remaining = plan.getContractEndDate() != null
-                    ? Math.max(0, ChronoUnit.MONTHS.between(
-                            YearMonth.now(), YearMonth.from(plan.getContractEndDate())))
-                    : 0;
+        if (plan.isCurrent() && plan.getContractEndDate() != null) {
+            // Texas law (PUCT §25.272): no ETF within 14 days of contract end.
+            boolean feeWaived = !plan.getContractEndDate().isAfter(LocalDate.now().plusDays(14));
+            if (!feeWaived) {
+                long remaining = Math.max(0, ChronoUnit.MONTHS.between(
+                        YearMonth.now(), YearMonth.from(plan.getContractEndDate())));
+                if (plan.getTerminationFeeFlat() != null)     terminationFee += plan.getTerminationFeeFlat();
+                if (plan.getTerminationFeePerMonth() != null) terminationFee += plan.getTerminationFeePerMonth() * remaining;
+            }
+        } else if (plan.isCurrent()) {
             if (plan.getTerminationFeeFlat() != null)     terminationFee += plan.getTerminationFeeFlat();
-            if (plan.getTerminationFeePerMonth() != null) terminationFee += plan.getTerminationFeePerMonth() * remaining;
+            if (plan.getTerminationFeePerMonth() != null) terminationFee += plan.getTerminationFeePerMonth();
         }
 
         double remainingMonthsCost = 0;

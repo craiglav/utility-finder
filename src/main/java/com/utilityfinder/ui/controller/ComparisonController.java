@@ -24,6 +24,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
 
+import java.time.LocalDate;
 import java.time.Month;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
@@ -44,6 +45,7 @@ public class ComparisonController implements WorkspaceAware {
     @FXML private GridPane  comparisonGrid;
     @FXML private CheckBox  chkDelivery;
     @FXML private Label     deliveryInfoLabel;
+    @FXML private Label     lawNoteLabel;
 
     // ── Detail FXML ───────────────────────────────────────────────────────────
     @FXML private VBox      detailPane;
@@ -267,6 +269,23 @@ public class ComparisonController implements WorkspaceAware {
             Double pct = s.plan().getRenewablePercent();
             comparisonGrid.add(dataCell(pct == null ? "—" : String.format("%.0f%%", pct),
                     i == bestRenewable && pct != null), col, 9);
+        }
+
+        // 14-day law note — show when the current plan's ETF is waived by Texas law
+        if (currentOptIdx.isPresent()) {
+            RatePlan cp = summaries.get(currentOptIdx.getAsInt()).plan();
+            boolean hasEtf = cp.getTerminationFeeFlat() != null || cp.getTerminationFeePerMonth() != null;
+            boolean within14Days = cp.getContractEndDate() != null
+                    && !cp.getContractEndDate().isAfter(LocalDate.now().plusDays(14));
+            if (hasEtf && within14Days && lawNoteLabel != null) {
+                lawNoteLabel.setText("No early termination fee applies — your contract ends within"
+                        + " 14 days and Texas law (PUCT §25.272) waives the ETF during this window.");
+                setVisible(lawNoteLabel, true);
+            } else if (lawNoteLabel != null) {
+                setVisible(lawNoteLabel, false);
+            }
+        } else if (lawNoteLabel != null) {
+            setVisible(lawNoteLabel, false);
         }
     }
 
