@@ -248,8 +248,10 @@ public class UsageController implements WorkspaceAware {
         task.setOnSucceeded(e -> {
             importBtn.setDisable(false);
             clearBtn.setDisable(false);
+            ImportResult r = task.getValue();
+            Services.get().tdsp.autoDetectIfNeeded(workspace.getId(), r.esiid());
             loadData();
-            showImportResult(task.getValue());
+            showImportResult(r);
         });
 
         task.setOnFailed(e -> {

@@ -3,12 +3,14 @@ package com.utilityfinder.app;
 import com.utilityfinder.repository.InsightsRepository;
 import com.utilityfinder.repository.IntervalRepository;
 import com.utilityfinder.repository.RatePlanRepository;
+import com.utilityfinder.repository.TdspRepository;
 import com.utilityfinder.repository.WorkspaceRepository;
 import com.utilityfinder.service.ComparisonService;
 import com.utilityfinder.service.InsightsService;
 import com.utilityfinder.service.IntervalImportService;
 import com.utilityfinder.service.IntervalService;
 import com.utilityfinder.service.RatePlanService;
+import com.utilityfinder.service.TdspService;
 import com.utilityfinder.service.WorkspaceService;
 
 /**
@@ -23,6 +25,7 @@ public class Services {
     private final IntervalRepository  intervalRepo   = new IntervalRepository();
     private final RatePlanRepository  ratePlanRepo   = new RatePlanRepository();
     private final InsightsRepository  insightsRepo   = new InsightsRepository();
+    private final TdspRepository      tdspRepo       = new TdspRepository();
 
     public final WorkspaceService      workspaces     = new WorkspaceService(workspaceRepo);
     public final IntervalService       intervals      = new IntervalService(intervalRepo);
@@ -30,6 +33,7 @@ public class Services {
     public final RatePlanService       ratePlans      = new RatePlanService(ratePlanRepo);
     public final ComparisonService     comparison     = new ComparisonService(intervals, ratePlans);
     public final InsightsService       insights       = new InsightsService(insightsRepo);
+    public final TdspService           tdsp           = new TdspService(tdspRepo);
 
     private Services() {}
 

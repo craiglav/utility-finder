@@ -109,6 +109,33 @@ public class Database {
             FOREIGN KEY (workspace_id) REFERENCES workspace(id) ON DELETE CASCADE,
             UNIQUE (workspace_id, reading_date, start_minute)
         )
+        """,
         """
+        CREATE TABLE IF NOT EXISTS tdsp (
+            id             BIGINT       AUTO_INCREMENT PRIMARY KEY,
+            name           VARCHAR(100) NOT NULL,
+            esiid_prefix   VARCHAR(10),
+            pdf_filename   VARCHAR(100),
+            base_charge    DOUBLE       NOT NULL DEFAULT 0.0,
+            per_kwh_charge DOUBLE       NOT NULL DEFAULT 0.0,
+            effective_date DATE,
+            last_verified  DATE
+        )
+        """,
+        // Seed the 5 ERCOT TDSPs if the table is empty.
+        // Rates sourced from PUCT TDR reports (March 2026 cycle) — verify via Check for Updates.
+        // ESIID prefixes are the first 4 digits of a Texas meter ESIID.
+        """
+        MERGE INTO tdsp (id, name, esiid_prefix, pdf_filename, base_charge, per_kwh_charge, effective_date, last_verified)
+        KEY (id)
+        VALUES
+          (1, 'CenterPoint',        '1008', 'CenterPoint_Rate_Report.pdf', 6.49,   0.04616, DATE '2026-03-01', DATE '2026-03-01'),
+          (2, 'Oncor',              '1007', 'Oncor_Rate_Report.pdf',        3.42,   0.03971, DATE '2026-03-01', DATE '2026-03-01'),
+          (3, 'AEP Texas Central',  '1004', 'AEP_Rate_Report.pdf',         7.85,   0.04489, DATE '2026-03-01', DATE '2026-03-01'),
+          (4, 'AEP Texas North',    '1003', 'AEP_Rate_Report.pdf',         7.85,   0.04489, DATE '2026-03-01', DATE '2026-03-01'),
+          (5, 'TNMP',               '1044', 'TNMP_Rate_Report.pdf',         7.85,   0.06218, DATE '2026-03-01', DATE '2026-03-01'),
+          (6, 'Lubbock Power & Light', '1022', NULL,                        5.50,   0.03500, DATE '2026-03-01', DATE '2026-03-01')
+        """,
+        "ALTER TABLE workspace ADD COLUMN IF NOT EXISTS tdsp_id BIGINT"
     );
 }

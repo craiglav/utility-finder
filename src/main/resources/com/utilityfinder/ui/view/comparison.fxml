@@ -14,6 +14,8 @@
             <Label text="Compare Rate Plans"
                    style="-fx-font-size: 16; -fx-font-weight: bold;"/>
             <Region HBox.hgrow="ALWAYS"/>
+            <CheckBox fx:id="chkDelivery" text="Include Delivery" selected="true"
+                      onAction="#handleDeliveryToggle" mnemonicParsing="false"/>
             <Button text="⟳  Refresh" onAction="#handleRefresh" mnemonicParsing="false"/>
         </HBox>
 
@@ -30,6 +32,12 @@
             <GridPane fx:id="comparisonGrid" hgap="1" vgap="1"
                       style="-fx-background-color: #d5d8dc;"/>
         </ScrollPane>
+
+        <Label fx:id="deliveryInfoLabel" wrapText="true"
+               visible="false" managed="false"
+               style="-fx-text-fill: #7f8c8d; -fx-font-size: 11;
+                      -fx-background-color: #f8f9fa; -fx-padding: 6 10;
+                      -fx-background-radius: 4;"/>
 
         <Label text="Click 'Detail ▶' in any plan header to see the monthly breakdown  •  Esc: return from detail"
                style="-fx-text-fill: #95a5a6; -fx-font-size: 11;"/>
@@ -56,6 +64,7 @@
                     <TableColumn fx:id="colDetailBase"     text="Base"     prefWidth="90"  sortable="false"/>
                     <TableColumn fx:id="colDetailEnergy"   text="Energy"   prefWidth="100" sortable="false"/>
                     <TableColumn fx:id="colDetailDiscount" text="Discount" prefWidth="100" sortable="false"/>
+                    <TableColumn fx:id="colDetailDelivery" text="Delivery" prefWidth="100" sortable="false" visible="false"/>
                     <TableColumn fx:id="colDetailTotal"    text="Total"    prefWidth="110" sortable="false"/>
                 </columns>
             </TableView>

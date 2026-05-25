@@ -4,6 +4,7 @@ import com.utilityfinder.app.Services;
 import com.utilityfinder.model.MonthlyEstimate;
 import com.utilityfinder.model.PlanSummary;
 import com.utilityfinder.model.RatePlan;
+import com.utilityfinder.model.Tdsp;
 import com.utilityfinder.model.TierDiscount;
 import com.utilityfinder.model.Workspace;
 import com.utilityfinder.service.ComparisonService;
@@ -41,17 +42,20 @@ public class ComparisonController implements WorkspaceAware {
     @FXML private Label     usageInfoLabel;
     @FXML private Label     warningBanner;
     @FXML private GridPane  comparisonGrid;
+    @FXML private CheckBox  chkDelivery;
+    @FXML private Label     deliveryInfoLabel;
 
     // ── Detail FXML ───────────────────────────────────────────────────────────
     @FXML private VBox      detailPane;
     @FXML private Label     detailTitle;
     @FXML private Label     detailPlanInfo;
-    @FXML private TableView<MonthlyEstimate>         detailTable;
+    @FXML private TableView<MonthlyEstimate>           detailTable;
     @FXML private TableColumn<MonthlyEstimate, String> colDetailMonth;
     @FXML private TableColumn<MonthlyEstimate, String> colDetailKwh;
     @FXML private TableColumn<MonthlyEstimate, String> colDetailBase;
     @FXML private TableColumn<MonthlyEstimate, String> colDetailEnergy;
     @FXML private TableColumn<MonthlyEstimate, String> colDetailDiscount;
+    @FXML private TableColumn<MonthlyEstimate, String> colDetailDelivery;
     @FXML private TableColumn<MonthlyEstimate, String> colDetailTotal;
     @FXML private HBox      chartArea;
     @FXML private Label     detailFootnote;
@@ -61,6 +65,7 @@ public class ComparisonController implements WorkspaceAware {
     private List<PlanSummary> summaries;
     private PlanSummary currentDetail;
     private Workspace workspace;
+    private Tdsp workspaceTdsp;
     private final ComparisonService service = Services.get().comparison;
 
     // ── Init ──────────────────────────────────────────────────────────────────
@@ -83,7 +88,9 @@ public class ComparisonController implements WorkspaceAware {
 
     @Override
     public void setWorkspace(Workspace workspace) {
-        this.workspace = workspace;
+        this.workspace    = workspace;
+        this.workspaceTdsp = Services.get().tdsp.findForWorkspace(workspace.getId()).orElse(null);
+        if (chkDelivery != null) chkDelivery.setDisable(workspaceTdsp == null);
         loadData();
     }
 
@@ -148,31 +155,34 @@ public class ComparisonController implements WorkspaceAware {
             return;
         }
 
+        boolean showDelivery = workspaceTdsp != null
+                && chkDelivery != null && chkDelivery.isSelected();
+        updateDeliveryInfoLabel(showDelivery, summaries);
+
         int n = summaries.size();
 
-        // Column 0: row labels, fixed width; columns 1..n: plan data, flexible
         comparisonGrid.getColumnConstraints().add(colConstraint(155, Priority.NEVER));
         for (int i = 0; i < n; i++) {
             comparisonGrid.getColumnConstraints().add(colConstraint(190, Priority.SOMETIMES));
         }
 
-        // Header row (row 0): corner cell + plan header per column
-        comparisonGrid.add(cornerCell(), 0, 0);
+        // Delivery-adjusted annual cost per plan (delivery is identical across plans for
+        // the same usage data, so it only shifts the absolute numbers, not the rankings).
+        double[] annualTotals = new double[n];
         for (int i = 0; i < n; i++) {
-            comparisonGrid.add(planHeaderCell(summaries.get(i)), i + 1, 0);
+            annualTotals[i] = summaries.get(i).annualCost()
+                    + (showDelivery ? annualDeliveryCost(summaries.get(i)) : 0);
         }
 
-        // Current plan index — derive remaining months and financial context for new rows
-        OptionalInt currentIdx = IntStream.range(0, n)
+        // Current plan context
+        OptionalInt currentOptIdx = IntStream.range(0, n)
                 .filter(i -> summaries.get(i).plan().isCurrent())
                 .findFirst();
-        double currentAnnual = currentIdx.isPresent()
-                ? summaries.get(currentIdx.getAsInt()).annualCost() : Double.NaN;
         long remainingMonths = 0;
         double currentRemainingCost = Double.NaN;
         double exitFee = 0;
-        if (currentIdx.isPresent()) {
-            PlanSummary cp = summaries.get(currentIdx.getAsInt());
+        if (currentOptIdx.isPresent()) {
+            PlanSummary cp = summaries.get(currentOptIdx.getAsInt());
             if (cp.plan().getContractEndDate() != null) {
                 remainingMonths = Math.max(0, ChronoUnit.MONTHS.between(
                         YearMonth.now(), YearMonth.from(cp.plan().getContractEndDate())));
@@ -180,25 +190,33 @@ public class ComparisonController implements WorkspaceAware {
             currentRemainingCost = cp.remainingMonthsCost();
             exitFee = cp.terminationFee();
         }
+        double currentAnnual = currentOptIdx.isPresent()
+                ? annualTotals[currentOptIdx.getAsInt()] : Double.NaN;
 
-        // Row labels (column 0, rows 1–9)
-        String remainingLabel = remainingMonths > 0 ? "Cost (" + remainingMonths + " mo)" : "Cost (N mo)";
-        String[] labels = {"Annual Cost", "vs. Current", "Exit Fee", remainingLabel, "Switch Savings",
-                           "Avg ¢/kWh", "Highest Month", "Lowest Month", "Renewable"};
+        // Header row (row 0)
+        comparisonGrid.add(cornerCell(), 0, 0);
+        for (int i = 0; i < n; i++) {
+            comparisonGrid.add(planHeaderCell(summaries.get(i)), i + 1, 0);
+        }
+
+        // Row labels — same regardless of delivery toggle
+        String remainingLabel = remainingMonths > 0
+                ? "Cost (" + remainingMonths + " mo)" : "Cost (N mo)";
+        String[] labels = {"Annual Cost", "vs. Current", "Exit Fee", remainingLabel,
+                           "Switch Savings", "Avg ¢/kWh", "Highest Month", "Lowest Month", "Renewable"};
         for (int r = 0; r < labels.length; r++) {
             comparisonGrid.add(rowLabelCell(labels[r]), 0, r + 1);
         }
 
-        // Find best (lowest cost) column per metric row
-        int bestAnnual    = argMin(summaries, s -> s.annualCost());
+        // Best-column indices (delivery is equal across plans so rankings are unchanged)
+        int bestAnnual    = argMin(summaries, s -> annualTotals[summaries.indexOf(s)]);
         int bestRemaining = remainingMonths > 0 ? argMin(summaries, s -> s.remainingMonthsCost()) : -1;
         int bestRate      = argMin(summaries, s -> s.effectiveAvgPerKwh());
-        int bestHighest   = argMin(summaries, s -> s.highestMonth().totalCost());
-        int bestLowest    = argMin(summaries, s -> s.lowestMonth().totalCost());
-
-        // Renewable: highest wins; only compete among plans that have a value
-        boolean anyRenewable = summaries.stream()
-                .anyMatch(s -> s.plan().getRenewablePercent() != null);
+        int bestHighest   = argMin(summaries, s -> s.highestMonth().totalCost()
+                + (showDelivery ? deliveryCostForMonth(s.highestMonth()) : 0));
+        int bestLowest    = argMin(summaries, s -> s.lowestMonth().totalCost()
+                + (showDelivery ? deliveryCostForMonth(s.lowestMonth()) : 0));
+        boolean anyRenewable = summaries.stream().anyMatch(s -> s.plan().getRenewablePercent() != null);
         int bestRenewable = anyRenewable
                 ? argMax(summaries, s -> s.plan().getRenewablePercent() != null
                         ? s.plan().getRenewablePercent() : -1.0)
@@ -206,25 +224,82 @@ public class ComparisonController implements WorkspaceAware {
 
         final long rm = remainingMonths;
         final double crc = currentRemainingCost;
-        final double ef = exitFee;
+        final double ef  = exitFee;
 
-        // Data cells (rows 1–9)
         for (int i = 0; i < n; i++) {
-            PlanSummary s = summaries.get(i);
-            int col = i + 1;
-            comparisonGrid.add(dataCell(formatDollars(s.annualCost()),          i == bestAnnual),    col, 1);
-            comparisonGrid.add(deltaCell(s, currentAnnual),                                          col, 2);
-            comparisonGrid.add(exitFeeCell(s),                                                       col, 3);
-            String remText = rm > 0 ? formatDollars(s.remainingMonthsCost()) : "—";
-            comparisonGrid.add(dataCell(remText, rm > 0 && i == bestRemaining),                      col, 4);
-            comparisonGrid.add(switchSavingsCell(s, crc, ef, rm),                                    col, 5);
-            comparisonGrid.add(dataCell(formatCents(s.effectiveAvgPerKwh()),    i == bestRate),      col, 6);
-            comparisonGrid.add(dataCell(monthCostLabel(s.highestMonth()),       i == bestHighest),   col, 7);
-            comparisonGrid.add(dataCell(monthCostLabel(s.lowestMonth()),        i == bestLowest),    col, 8);
+            PlanSummary s   = summaries.get(i);
+            int         col = i + 1;
+
+            // Annual Cost (energy + delivery when checked)
+            comparisonGrid.add(dataCell(formatDollars(annualTotals[i]), i == bestAnnual), col, 1);
+
+            // vs. Current (delivery cancels in the delta since all plans share the same TDSP)
+            if (s.plan().isCurrent() || Double.isNaN(currentAnnual)) {
+                comparisonGrid.add(dataCell("—", false), col, 2);
+            } else {
+                comparisonGrid.add(deltaCell(annualTotals[i] - currentAnnual), col, 2);
+            }
+
+            // Exit Fee
+            comparisonGrid.add(exitFeeCell(s), col, 3);
+
+            // Cost (N mo) — remaining energy cost + proportional delivery
+            double adjRemaining = s.remainingMonthsCost()
+                    + (showDelivery ? annualDeliveryCost(s) / 12.0 * rm : 0);
+            String remText = rm > 0 ? formatDollars(adjRemaining) : "—";
+            comparisonGrid.add(dataCell(remText, rm > 0 && i == bestRemaining), col, 4);
+
+            // Switch Savings — delivery is equal for all plans so it cancels; use energy-only delta
+            comparisonGrid.add(switchSavingsCell(s, crc, ef, rm), col, 5);
+
+            // Avg ¢/kWh (energy rate, not blended with delivery)
+            comparisonGrid.add(dataCell(formatCents(s.effectiveAvgPerKwh()), i == bestRate), col, 6);
+
+            // Highest / Lowest Month (delivery added when checked)
+            double hmTotal = s.highestMonth().totalCost()
+                    + (showDelivery ? deliveryCostForMonth(s.highestMonth()) : 0);
+            double lmTotal = s.lowestMonth().totalCost()
+                    + (showDelivery ? deliveryCostForMonth(s.lowestMonth()) : 0);
+            comparisonGrid.add(dataCell(monthCostLabel(s.highestMonth(), hmTotal), i == bestHighest), col, 7);
+            comparisonGrid.add(dataCell(monthCostLabel(s.lowestMonth(),  lmTotal), i == bestLowest),  col, 8);
+
+            // Renewable
             Double pct = s.plan().getRenewablePercent();
-            boolean renewBest = i == bestRenewable && pct != null;
-            comparisonGrid.add(dataCell(pct == null ? "—" : String.format("%.0f%%", pct), renewBest), col, 9);
+            comparisonGrid.add(dataCell(pct == null ? "—" : String.format("%.0f%%", pct),
+                    i == bestRenewable && pct != null), col, 9);
         }
+    }
+
+    // ── Delivery helpers ──────────────────────────────────────────────────────
+
+    private double deliveryCostForMonth(MonthlyEstimate est) {
+        if (workspaceTdsp == null) return 0;
+        return workspaceTdsp.getBaseCharge() + workspaceTdsp.getPerKwhCharge() * est.avgKwh();
+    }
+
+    private double annualDeliveryCost(PlanSummary s) {
+        return s.monthlyEstimates().stream()
+                .mapToDouble(this::deliveryCostForMonth)
+                .sum();
+    }
+
+    private void updateDeliveryInfoLabel(boolean showDelivery, List<PlanSummary> summaries) {
+        if (!showDelivery || workspaceTdsp == null) {
+            setVisible(deliveryInfoLabel, false);
+            return;
+        }
+        double avgMonthly = summaries.isEmpty() ? 0
+                : summaries.get(0).monthlyEstimates().stream()
+                        .mapToDouble(this::deliveryCostForMonth)
+                        .average()
+                        .orElse(0);
+        deliveryInfoLabel.setText(String.format(
+                "Delivery: %s  ·  $%.2f/mo base + %.4f¢/kWh  ·  avg %s/mo based on your usage",
+                workspaceTdsp.getName(),
+                workspaceTdsp.getBaseCharge(),
+                workspaceTdsp.getPerKwhCharge() * 100,
+                formatDollars(avgMonthly)));
+        setVisible(deliveryInfoLabel, true);
     }
 
     private Node cornerCell() {
@@ -284,11 +359,7 @@ public class ComparisonController implements WorkspaceAware {
         return l;
     }
 
-    private Node deltaCell(PlanSummary s, double currentAnnual) {
-        if (s.plan().isCurrent() || Double.isNaN(currentAnnual)) {
-            return dataCell("—", false);
-        }
-        double delta = s.annualCost() - currentAnnual;
+    private Node deltaCell(double delta) {
         Label l = new Label();
         l.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         l.setPadding(new Insets(10, 14, 10, 14));
@@ -364,10 +435,17 @@ public class ComparisonController implements WorkspaceAware {
         detailPlanInfo.setText(info.toString());
 
         detailTable.setItems(FXCollections.observableArrayList(summary.monthlyEstimates()));
-        // Force row factory to re-evaluate against the new currentDetail
         detailTable.refresh();
 
-        detailAnnualTotal.setText("Annual Total:   " + formatDollars(summary.annualCost()));
+        boolean showDelivery = workspaceTdsp != null
+                && chkDelivery != null && chkDelivery.isSelected();
+        colDetailDelivery.setVisible(showDelivery);
+
+        double annualTotal = summary.annualCost();
+        if (showDelivery) annualTotal += annualDeliveryCost(summary);
+        detailAnnualTotal.setText(
+                (showDelivery ? "Annual Total (incl. delivery):   " : "Annual Total:   ")
+                + formatDollars(annualTotal));
         buildCharts(summary);
 
         boolean hasEstimates = !summary.estimatedMonthNames().isEmpty();
@@ -412,8 +490,16 @@ public class ComparisonController implements WorkspaceAware {
             return new SimpleStringProperty(d > 0 ? String.format("-$%.2f", d) : "—");
         });
 
-        colDetailTotal.setCellValueFactory(c ->
-                new SimpleStringProperty(String.format("$%.2f", c.getValue().totalCost())));
+        colDetailDelivery.setCellValueFactory(c ->
+                new SimpleStringProperty(String.format("$%.2f", deliveryCostForMonth(c.getValue()))));
+
+        colDetailTotal.setCellValueFactory(c -> {
+            MonthlyEstimate e = c.getValue();
+            boolean showDelivery = workspaceTdsp != null
+                    && chkDelivery != null && chkDelivery.isSelected();
+            double total = e.totalCost() + (showDelivery ? deliveryCostForMonth(e) : 0);
+            return new SimpleStringProperty(String.format("$%.2f", total));
+        });
 
         // Highlight highest-cost row (red) and lowest-cost row (green);
         // listen to selectedProperty so style stays correct when row is clicked.
@@ -465,9 +551,12 @@ public class ComparisonController implements WorkspaceAware {
         costChart.setLegendVisible(false);
         costChart.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         costChart.getStyleClass().add("chart-cost");
+        boolean showDelivery = workspaceTdsp != null
+                && chkDelivery != null && chkDelivery.isSelected();
         XYChart.Series<String, Number> costSeries = new XYChart.Series<>();
         estimates.forEach(e -> costSeries.getData().add(new XYChart.Data<>(
-                Month.of(e.month()).getDisplayName(TextStyle.SHORT, Locale.getDefault()), e.totalCost())));
+                Month.of(e.month()).getDisplayName(TextStyle.SHORT, Locale.getDefault()),
+                e.totalCost() + (showDelivery ? deliveryCostForMonth(e) : 0))));
         costChart.getData().add(costSeries);
 
         // Overlay chart: kWh on right y-axis, transparent background
@@ -522,8 +611,11 @@ public class ComparisonController implements WorkspaceAware {
 
     // ── Handlers ─────────────────────────────────────────────────────────────
 
-    @FXML private void handleRefresh() { loadData(); }
-    @FXML private void handleBack()    { showOverview(); }
+    @FXML private void handleRefresh()       { loadData(); }
+    @FXML private void handleBack()          { showOverview(); }
+    @FXML private void handleDeliveryToggle() {
+        if (summaries != null) buildComparisonGrid(summaries);
+    }
 
     // ── Utilities ─────────────────────────────────────────────────────────────
 
@@ -567,7 +659,11 @@ public class ComparisonController implements WorkspaceAware {
     }
 
     private static String monthCostLabel(MonthlyEstimate est) {
+        return monthCostLabel(est, est.totalCost());
+    }
+
+    private static String monthCostLabel(MonthlyEstimate est, double total) {
         String abbr = Month.of(est.month()).getDisplayName(TextStyle.SHORT, Locale.getDefault());
-        return abbr + "  " + String.format("$%,.2f", est.totalCost());
+        return abbr + "  " + String.format("$%,.2f", total);
     }
 }
