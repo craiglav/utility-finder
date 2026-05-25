@@ -61,12 +61,6 @@ jobs:
         shell: bash
         run: cp target/utility-finder-${{ steps.vars.outputs.jar_version }}.jar target/lib/
 
-      # WiX is required by jpackage to build MSI on Windows
-      - name: Install WiX Toolset (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: choco install wixtoolset --version=3.14.1 -y
-
       # Create a trimmed JRE that includes JavaFX modules and their native libraries
       - name: Create jlink runtime image
         shell: bash
