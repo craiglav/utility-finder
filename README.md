@@ -26,12 +26,12 @@ Run the `.msi` installer and follow the prompts. A Start Menu shortcut and optio
 ### Linux (.deb)
 
 ```bash
-sudo dpkg -i utility-finder_1.0.0_amd64.deb
+sudo dpkg -i utility-finder_<version>_amd64.deb
 ```
 
 The app appears in your application launcher. To run from the terminal:
 ```bash
-/opt/utilityfinder/bin/Utility\ Finder
+/opt/utility-finder/bin/Utility\ Finder
 ```
 
 ## Releasing
