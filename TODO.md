@@ -15,8 +15,8 @@
 
 ## Non-Functionals 
 
-1) Multi-platform support
-2) Release Management ??
+1) ✅ Multi-platform support
+2) ✅ Release Management
 3) ✅ User Guide
 4) ✅ Unit Testing
  
