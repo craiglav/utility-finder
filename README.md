@@ -2,6 +2,8 @@
 
 Texas electric rate comparison tool. Compares plans across providers using your actual usage data, with support for Time-of-Use rates, TDSP delivery charges, and interval-level billing.
 
+→ **[User Guide](USER_GUIDE.md)**
+
 ## Installation
 
 Download the installer for your platform from the [Actions artifacts](../../actions) or a tagged release. No Java installation required — the JVM is bundled.
